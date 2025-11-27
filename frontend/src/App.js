@@ -1195,16 +1195,16 @@ function FixoDialog({ open, onOpenChange, onSave, editingItem }) {
           </div>
           <div>
             <Label>Responsável</Label>
-            <Select value={formData.responsavel} onValueChange={(v) => setFormData({ ...formData, responsavel: v })}>
-              <SelectTrigger data-testid="fixo-responsavel-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Davi">Davi</SelectItem>
-                <SelectItem value="Ana">Ana</SelectItem>
-                <SelectItem value="Outro">Outro</SelectItem>
-              </SelectContent>
-            </Select>
+            <select 
+              value={formData.responsavel} 
+              onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="fixo-responsavel-select"
+            >
+              <option value="Davi">Davi</option>
+              <option value="Ana">Ana</option>
+              <option value="Outro">Outro</option>
+            </select>
           </div>
           <div>
             <Label>Dia de {formData.tipo === 'entrada' ? 'Recebimento' : 'Vencimento'}</Label>
