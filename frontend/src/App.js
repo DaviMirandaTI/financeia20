@@ -1018,34 +1018,34 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
           </div>
           <div>
             <Label>Categoria</Label>
-            <Select value={formData.categoria} onValueChange={(v) => setFormData({ ...formData, categoria: v })}>
-              <SelectTrigger data-testid="lancamento-categoria-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Alimentação">Alimentação</SelectItem>
-                <SelectItem value="Moradia">Moradia</SelectItem>
-                <SelectItem value="Transporte">Transporte</SelectItem>
-                <SelectItem value="Saúde">Saúde</SelectItem>
-                <SelectItem value="Lazer">Lazer</SelectItem>
-                <SelectItem value="Filha">Filha</SelectItem>
-                <SelectItem value="Dívidas">Dívidas</SelectItem>
-                <SelectItem value="Investimento">Investimento</SelectItem>
-                <SelectItem value="Outros">Outros</SelectItem>
-              </SelectContent>
-            </Select>
+            <select 
+              value={formData.categoria} 
+              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="lancamento-categoria-select"
+            >
+              <option value="Alimentação">Alimentação</option>
+              <option value="Moradia">Moradia</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Saúde">Saúde</option>
+              <option value="Lazer">Lazer</option>
+              <option value="Filha">Filha</option>
+              <option value="Dívidas">Dívidas</option>
+              <option value="Investimento">Investimento</option>
+              <option value="Outros">Outros</option>
+            </select>
           </div>
           <div>
             <Label>Tipo</Label>
-            <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
-              <SelectTrigger data-testid="lancamento-tipo-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entrada">Entrada</SelectItem>
-                <SelectItem value="saida">Saída</SelectItem>
-              </SelectContent>
-            </Select>
+            <select 
+              value={formData.tipo} 
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="lancamento-tipo-select"
+            >
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saída</option>
+            </select>
           </div>
           <div>
             <Label>Valor (R$)</Label>
