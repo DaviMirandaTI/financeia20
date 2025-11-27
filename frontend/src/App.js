@@ -1260,7 +1260,7 @@ function FixoDialog({ open, onOpenChange, onSave, editingItem }) {
 // Investimento Dialog
 function InvestimentoDialog({ open, onOpenChange, onSave, editingItem }) {
   const [formData, setFormData] = useState({
-    data: '',
+    data: new Date().toISOString().split('T')[0],
     ativo: 'BNB',
     valor: '',
     origem: '',
@@ -1268,16 +1268,18 @@ function InvestimentoDialog({ open, onOpenChange, onSave, editingItem }) {
   });
 
   useEffect(() => {
-    if (editingItem) {
-      setFormData(editingItem);
-    } else {
-      setFormData({
-        data: new Date().toISOString().split('T')[0],
-        ativo: 'BNB',
-        valor: '',
-        origem: '',
-        observacao: ''
-      });
+    if (open) {
+      if (editingItem) {
+        setFormData(editingItem);
+      } else {
+        setFormData({
+          data: new Date().toISOString().split('T')[0],
+          ativo: 'BNB',
+          valor: '',
+          origem: '',
+          observacao: ''
+        });
+      }
     }
   }, [editingItem, open]);
 
