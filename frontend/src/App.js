@@ -514,6 +514,7 @@ function App() {
       {/* Dialogs */}
       {showLancamentoDialog && (
         <LancamentoDialog 
+          key={editingItem ? `edit-lanc-${editingItem.id}` : 'new-lanc'}
           open={showLancamentoDialog} 
           onOpenChange={setShowLancamentoDialog}
           onSave={salvarLancamento}
@@ -522,6 +523,7 @@ function App() {
       )}
       {showFixoDialog && (
         <FixoDialog 
+          key={editingItem ? `edit-fixo-${editingItem.id}` : 'new-fixo'}
           open={showFixoDialog} 
           onOpenChange={setShowFixoDialog}
           onSave={salvarFixo}
@@ -530,6 +532,7 @@ function App() {
       )}
       {showInvestimentoDialog && (
         <InvestimentoDialog 
+          key={editingItem ? `edit-inv-${editingItem.id}` : 'new-inv'}
           open={showInvestimentoDialog} 
           onOpenChange={setShowInvestimentoDialog}
           onSave={salvarInvestimento}
