@@ -512,24 +512,30 @@ function App() {
       </main>
 
       {/* Dialogs */}
-      <LancamentoDialog 
-        open={showLancamentoDialog} 
-        onOpenChange={setShowLancamentoDialog}
-        onSave={salvarLancamento}
-        editingItem={editingItem}
-      />
-      <FixoDialog 
-        open={showFixoDialog} 
-        onOpenChange={setShowFixoDialog}
-        onSave={salvarFixo}
-        editingItem={editingItem}
-      />
-      <InvestimentoDialog 
-        open={showInvestimentoDialog} 
-        onOpenChange={setShowInvestimentoDialog}
-        onSave={salvarInvestimento}
-        editingItem={editingItem}
-      />
+      {showLancamentoDialog && (
+        <LancamentoDialog 
+          open={showLancamentoDialog} 
+          onOpenChange={setShowLancamentoDialog}
+          onSave={salvarLancamento}
+          editingItem={editingItem}
+        />
+      )}
+      {showFixoDialog && (
+        <FixoDialog 
+          open={showFixoDialog} 
+          onOpenChange={setShowFixoDialog}
+          onSave={salvarFixo}
+          editingItem={editingItem}
+        />
+      )}
+      {showInvestimentoDialog && (
+        <InvestimentoDialog 
+          open={showInvestimentoDialog} 
+          onOpenChange={setShowInvestimentoDialog}
+          onSave={salvarInvestimento}
+          editingItem={editingItem}
+        />
+      )}
       </div>
     </>
   );
