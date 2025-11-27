@@ -341,9 +341,11 @@ function App() {
   const pagamentoInteligente = useMemo(() => calcularPagamentoInteligente(), [fixos, periodoMes]);
 
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+    <>
+      <Toaster position="top-right" />
+      <div className="app-container">
+        {/* Sidebar */}
+        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="logo">
             <Wallet className="logo-icon" />
