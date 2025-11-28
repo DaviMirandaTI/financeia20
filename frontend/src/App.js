@@ -375,7 +375,7 @@ function App() {
     return { rendas, distribuicao, totalRendas, totalDespesas, saldoFinal, analise };
   };
 
-  const pagamentoInteligente = useMemo(() => calcularPagamentoInteligente(), [fixos, periodoMes]);
+  const pagamentoInteligente = useMemo(() => calcularPagamentoInteligente(), [fixos, periodoTipo, periodoMes, periodoAno]);
 
   return (
     <>
