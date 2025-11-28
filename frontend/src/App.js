@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import "@/App.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,213 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, CreditCard, LogOut } from "lucide-react";
-
-// TODO: Import view components when they are created
-// import DashboardView from "@/components/views/DashboardView";
-// import LancamentosView from "@/components/views/LancamentosView";
-// import FixosView from "@/components/views/FixosView";
-// import CartoesView from "@/components/views/CartoesView";
-// import PagamentoInteligenteView from "@/components/views/PagamentoInteligenteView";
-// import InvestimentosAvancadoView from "@/components/views/InvestimentosAvancadoView";
-
-// TODO: Import dialog components when they are created
-// import LancamentoDialog from "@/components/dialogs/LancamentoDialog";
-// import FixoDialog from "@/components/dialogs/FixoDialog";
-// import CartaoDialog from "@/components/dialogs/CartaoDialog";
-// import CompraDialog from "@/components/dialogs/CompraDialog";
-// import MovimentoDialog from "@/components/dialogs/MovimentoDialog";
-
-// Placeholder components
-const DashboardView = ({ stats, lancamentos }) => (
-  <div className="p-4">
-    <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Renda</p>
-              <p className="text-2xl font-bold text-green-600">R$ {stats.renda.toFixed(2)}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-600" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Despesas</p>
-              <p className="text-2xl font-bold text-red-600">R$ {stats.despesas.toFixed(2)}</p>
-            </div>
-            <TrendingDown className="h-8 w-8 text-red-600" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Resultado</p>
-              <p className={`text-2xl font-bold ${stats.resultado >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                R$ {stats.resultado.toFixed(2)}
-              </p>
-            </div>
-            <DollarSign className="h-8 w-8" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Investido</p>
-              <p className="text-2xl font-bold text-blue-600">R$ {stats.totalInvestido.toFixed(2)}</p>
-            </div>
-            <Target className="h-8 w-8 text-blue-600" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-    <p className="text-muted-foreground">Lançamentos: {lancamentos.length}</p>
-  </div>
-);
-
-const LancamentosView = ({ lancamentos, onAdd, onEdit, onDelete }) => (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-2xl font-bold">Lançamentos</h2>
-      <Button onClick={onAdd}>Adicionar Lançamento</Button>
-    </div>
-    <p className="text-muted-foreground">Total: {lancamentos.length} lançamentos</p>
-  </div>
-);
-
-const FixosView = ({ fixos, onAdd, onEdit, onDelete }) => (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-2xl font-bold">Lançamentos Fixos</h2>
-      <Button onClick={onAdd}>Adicionar Fixo</Button>
-    </div>
-    <p className="text-muted-foreground">Total: {fixos.length} fixos</p>
-  </div>
-);
-
-const CartoesView = ({ cartoes, compras, onAddCartao, onEditCartao, onDeleteCartao, onAddCompra, onEditCompra, onDeleteCompra, periodoMes }) => (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-2xl font-bold">Cartões de Crédito</h2>
-      <div className="space-x-2">
-        <Button onClick={onAddCartao}>Adicionar Cartão</Button>
-        <Button onClick={onAddCompra}>Adicionar Compra</Button>
-      </div>
-    </div>
-    <p className="text-muted-foreground">Cartões: {cartoes.length} | Compras: {compras.length}</p>
-  </div>
-);
-
-const PagamentoInteligenteView = ({ fixos, periodoMes }) => (
-  <div className="p-4">
-    <h2 className="text-2xl font-bold mb-4">Pagamento Inteligente</h2>
-    <p className="text-muted-foreground">Período: {periodoMes} | Fixos: {fixos.length}</p>
-  </div>
-);
-
-const InvestimentosAvancadoView = ({ movimentos, precosAtivos, setPrecosAtivos, onAdd, onEdit, onDelete }) => (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-2xl font-bold">Investimentos</h2>
-      <Button onClick={onAdd}>Adicionar Movimento</Button>
-    </div>
-    <p className="text-muted-foreground">Movimentos: {movimentos.length} | Ativos: {precosAtivos.length}</p>
-  </div>
-);
-
-const LancamentoDialog = ({ open, onOpenChange, onSave, editingItem }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{editingItem ? 'Editar' : 'Novo'} Lançamento</DialogTitle>
-      </DialogHeader>
-      <div className="p-4">
-        <p>Dialog placeholder for lançamento</p>
-      </div>
-      <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <Button onClick={() => { onSave({}); }}>Salvar</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-const FixoDialog = ({ open, onOpenChange, onSave, editingItem }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{editingItem ? 'Editar' : 'Novo'} Fixo</DialogTitle>
-      </DialogHeader>
-      <div className="p-4">
-        <p>Dialog placeholder for fixo</p>
-      </div>
-      <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <Button onClick={() => { onSave({}); }}>Salvar</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-const CartaoDialog = ({ open, onOpenChange, onSave, editingItem }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{editingItem ? 'Editar' : 'Novo'} Cartão</DialogTitle>
-      </DialogHeader>
-      <div className="p-4">
-        <p>Dialog placeholder for cartão</p>
-      </div>
-      <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <Button onClick={() => { onSave({}); }}>Salvar</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-const CompraDialog = ({ open, onOpenChange, onSave, editingItem, cartoes }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{editingItem ? 'Editar' : 'Nova'} Compra</DialogTitle>
-      </DialogHeader>
-      <div className="p-4">
-        <p>Dialog placeholder for compra</p>
-      </div>
-      <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <Button onClick={() => { onSave({}); }}>Salvar</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-const MovimentoDialog = ({ open, onOpenChange, onSave, editingItem }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{editingItem ? 'Editar' : 'Novo'} Movimento</DialogTitle>
-      </DialogHeader>
-      <div className="p-4">
-        <p>Dialog placeholder for movimento</p>
-      </div>
-      <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <Button onClick={() => { onSave({}); }}>Salvar</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
 
 function App() {
   // Auth state
@@ -326,7 +120,14 @@ function App() {
     localStorage.setItem('fs_precos_ativos', JSON.stringify(precosAtivos));
   }, [precosAtivos]);
 
-  const gerarLancamentosDoMes = useCallback((mesSelecionado) => {
+  // Auto-generate lancamentos from fixos
+  useEffect(() => {
+    if (periodoTipo === "mes" && periodoMes) {
+      gerarLancamentosDoMes(periodoMes);
+    }
+  }, [fixos, periodoMes, periodoTipo]);
+
+  const gerarLancamentosDoMes = (mesSelecionado) => {
     const [ano, mes] = mesSelecionado.split('-').map(Number);
     const fixosAtivos = fixos.filter(f => {
       if (!f.ativo) return false;
@@ -364,14 +165,7 @@ function App() {
         setLancamentos(prev => [...prev, novoLancamento]);
       }
     });
-  }, [fixos, lancamentos, setLancamentos]);
-
-  // Auto-generate lancamentos from fixos
-  useEffect(() => {
-    if (periodoTipo === "mes" && periodoMes) {
-      gerarLancamentosDoMes(periodoMes);
-    }
-  }, [fixos, periodoMes, periodoTipo, gerarLancamentosDoMes]);
+  };
 
   // Direct data access (no user filtering in v1.0)
 
@@ -390,7 +184,7 @@ function App() {
   }, [lancamentos, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
 
   const movimentosFiltrados = useMemo(() => {
-    return movimentosInvest.filter(m => {
+    return movimentosUsuario.filter(m => {
       if (periodoTipo === "mes") {
         return m.data.startsWith(periodoMes);
       } else if (periodoTipo === "ano") {
@@ -400,7 +194,7 @@ function App() {
       }
       return true;
     });
-  }, [movimentosInvest, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
+  }, [movimentosUsuario, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
 
   // Dashboard stats
   const stats = useMemo(() => {
@@ -612,7 +406,7 @@ function App() {
           )}
           {currentView === "fixos" && (
             <FixosView 
-              fixos={fixos} 
+              fixos={fixosUsuario} 
               onAdd={() => { setEditingItem(null); setShowFixoDialog(true); }}
               onEdit={(item) => { setEditingItem(item); setShowFixoDialog(true); }}
               onDelete={(id) => setFixos(prev => prev.filter(f => f.id !== id))}
@@ -620,8 +414,8 @@ function App() {
           )}
           {currentView === "cartoes" && (
             <CartoesView 
-              cartoes={cartoes}
-              compras={comprasCartao}
+              cartoes={cartoesUsuario}
+              compras={comprasUsuario}
               onAddCartao={() => { setEditingItem(null); setShowCartaoDialog(true); }}
               onEditCartao={(item) => { setEditingItem(item); setShowCartaoDialog(true); }}
               onDeleteCartao={(id) => setCartoes(prev => prev.filter(c => c.id !== id))}
@@ -631,7 +425,7 @@ function App() {
               periodoMes={periodoMes}
             />
           )}
-          {currentView === "pagamento" && <PagamentoInteligenteView fixos={fixos} periodoMes={periodoMes} />}
+          {currentView === "pagamento" && <PagamentoInteligenteView fixos={fixosUsuario} periodoMes={periodoMes} />}
           {currentView === "investimentos" && (
             <InvestimentosAvancadoView 
               movimentos={movimentosFiltrados}
@@ -707,7 +501,7 @@ function App() {
             key={editingItem ? `edit-compra-${editingItem.id}` : 'new-compra'}
             open={showCompraDialog} 
             onOpenChange={setShowCompraDialog}
-            cartoes={cartoes}
+            cartoes={cartoesUsuario}
             onSave={(data) => {
               if (editingItem) {
                 setComprasCartao(prev => prev.map(c => c.id === editingItem.id ? { ...data, id: editingItem.id, userId: currentUser.userId } : c));
