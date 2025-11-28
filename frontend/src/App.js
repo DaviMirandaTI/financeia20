@@ -64,15 +64,24 @@ function App() {
 
   // Save data to localStorage
   useEffect(() => {
-    localStorage.setItem('fs_lancamentos', JSON.stringify(lancamentos));
+    if (lancamentos.length > 0 || localStorage.getItem('fs_lancamentos')) {
+      console.log('💾 Salvando lançamentos:', lancamentos.length);
+      localStorage.setItem('fs_lancamentos', JSON.stringify(lancamentos));
+    }
   }, [lancamentos]);
 
   useEffect(() => {
-    localStorage.setItem('fs_fixos', JSON.stringify(fixos));
+    if (fixos.length > 0 || localStorage.getItem('fs_fixos')) {
+      console.log('💾 Salvando fixos:', fixos.length);
+      localStorage.setItem('fs_fixos', JSON.stringify(fixos));
+    }
   }, [fixos]);
 
   useEffect(() => {
-    localStorage.setItem('fs_investimentos', JSON.stringify(investimentos));
+    if (investimentos.length > 0 || localStorage.getItem('fs_investimentos')) {
+      console.log('💾 Salvando investimentos:', investimentos.length);
+      localStorage.setItem('fs_investimentos', JSON.stringify(investimentos));
+    }
   }, [investimentos]);
 
   // Auto-generate lancamentos from fixos
