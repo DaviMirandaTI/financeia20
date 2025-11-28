@@ -501,7 +501,7 @@ function App() {
             key={editingItem ? `edit-compra-${editingItem.id}` : 'new-compra'}
             open={showCompraDialog} 
             onOpenChange={setShowCompraDialog}
-            cartoes={cartoesUsuario}
+            cartoes={cartoes}
             onSave={(data) => {
               if (editingItem) {
                 setComprasCartao(prev => prev.map(c => c.id === editingItem.id ? { ...data, id: editingItem.id, userId: currentUser.userId } : c));
