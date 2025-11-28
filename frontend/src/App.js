@@ -293,10 +293,7 @@ function App() {
     toast.success("Logout realizado!");
   };
 
-  // Show login if not logged in
-  if (!isLoggedIn) {
-    return <LoginView users={users} setUsers={setUsers} setIsLoggedIn={setIsLoggedIn} setCurrentUser={setCurrentUser} />;
-  }
+  // Removed login for v1.0 - direct access
 
   return (
     <>
