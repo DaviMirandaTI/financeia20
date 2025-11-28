@@ -406,7 +406,7 @@ function App() {
           )}
           {currentView === "fixos" && (
             <FixosView 
-              fixos={fixosUsuario} 
+              fixos={fixos} 
               onAdd={() => { setEditingItem(null); setShowFixoDialog(true); }}
               onEdit={(item) => { setEditingItem(item); setShowFixoDialog(true); }}
               onDelete={(id) => setFixos(prev => prev.filter(f => f.id !== id))}
