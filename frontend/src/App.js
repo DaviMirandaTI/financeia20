@@ -167,31 +167,7 @@ function App() {
     });
   };
 
-  // Filter data by current user
-  const lancamentosUsuario = useMemo(() => {
-    if (!currentUser) return [];
-    return lancamentos.filter(l => l.userId === currentUser.userId);
-  }, [lancamentos, currentUser]);
-
-  const fixosUsuario = useMemo(() => {
-    if (!currentUser) return [];
-    return fixos.filter(f => f.userId === currentUser.userId);
-  }, [fixos, currentUser]);
-
-  const cartoesUsuario = useMemo(() => {
-    if (!currentUser) return [];
-    return cartoes.filter(c => c.userId === currentUser.userId);
-  }, [cartoes, currentUser]);
-
-  const comprasUsuario = useMemo(() => {
-    if (!currentUser) return [];
-    return comprasCartao.filter(c => c.userId === currentUser.userId);
-  }, [comprasCartao, currentUser]);
-
-  const movimentosUsuario = useMemo(() => {
-    if (!currentUser) return [];
-    return movimentosInvest.filter(m => m.userId === currentUser.userId);
-  }, [movimentosInvest, currentUser]);
+  // Direct data access (no user filtering in v1.0)
 
   // Filter by period
   const lancamentosFiltrados = useMemo(() => {
