@@ -184,7 +184,7 @@ function App() {
   }, [lancamentos, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
 
   const movimentosFiltrados = useMemo(() => {
-    return movimentosUsuario.filter(m => {
+    return movimentosInvest.filter(m => {
       if (periodoTipo === "mes") {
         return m.data.startsWith(periodoMes);
       } else if (periodoTipo === "ano") {
@@ -194,7 +194,7 @@ function App() {
       }
       return true;
     });
-  }, [movimentosUsuario, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
+  }, [movimentosInvest, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
 
   // Dashboard stats
   const stats = useMemo(() => {
