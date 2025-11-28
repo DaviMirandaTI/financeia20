@@ -262,49 +262,73 @@ function App() {
     }
   };
 
-  // Pagamento Inteligente Algorithm
+  // Pagamento Inteligente Algorithm - CORRIGIDO
   const calcularPagamentoInteligente = () => {
-    const mesAtual = periodoTipo === "mes" ? periodoMes : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const mesAtual = periodoTipo === "mes" ? periodoMes : `${new Date().getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    console.log('Calculando Pagamento Inteligente para:', mesAtual);
+    console.log('Fixos disponíveis:', fixos.length);
     
     const rendas = fixos
-      .filter(f => f.ativo && f.tipo === 'entrada')
       .filter(f => {
-        const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
-        const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
-        if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
-        if (f.mesFim) {
-          const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
-          if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
+        if (!f.ativo || f.tipo !== 'entrada') return false;
+        
+        try {
+          const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
+          const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
+          
+          if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
+          
+          if (f.mesFim) {
+            const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
+            if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
+          }
+          
+          return true;
+        } catch (e) {
+          console.error('Erro ao processar fixo:', f, e);
+          return false;
         }
-        return true;
       })
       .map(f => ({
         descricao: f.descricao,
-        dia: f.diaVencimento,
-        valor: f.valor,
-        saldo: f.valor
+        dia: Number(f.diaVencimento) || 1,
+        valor: Number(f.valor) || 0,
+        saldo: Number(f.valor) || 0
       }))
       .sort((a, b) => a.dia - b.dia);
 
     const despesas = fixos
-      .filter(f => f.ativo && f.tipo === 'saida')
       .filter(f => {
-        const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
-        const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
-        if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
-        if (f.mesFim) {
-          const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
-          if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
+        if (!f.ativo || f.tipo !== 'saida') return false;
+        
+        try {
+          const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
+          const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
+          
+          if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
+          
+          if (f.mesFim) {
+            const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
+            if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
+          }
+          
+          return true;
+        } catch (e) {
+          console.error('Erro ao processar fixo:', f, e);
+          return false;
         }
-        return true;
       })
       .map(f => ({
         descricao: f.descricao,
-        diaVencimento: f.diaVencimento,
-        valor: f.valor,
+        diaVencimento: Number(f.diaVencimento) || 1,
+        valor: Number(f.valor) || 0,
         categoria: f.categoria
       }))
       .sort((a, b) => a.diaVencimento - b.diaVencimento);
+    
+    console.log('Rendas encontradas:', rendas.length, rendas);
+    console.log('Despesas encontradas:', despesas.length, despesas);
 
     const distribuicao = [];
     
