@@ -11,11 +11,16 @@ import uuid
 from datetime import datetime, timezone
 
 
+from urllib.parse import quote_plus
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+user = quote_plus(os.environ['MONGO_USER'])
+password = quote_plus(os.environ['MONGO_PASSWORD'])
+host = os.environ['MONGO_HOST_URL']
+mongo_url = f"mongodb+srv://{user}:{password}@{host}/?retryWrites=true&w=majority"
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
