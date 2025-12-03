@@ -41,8 +41,6 @@ function App() {
   const [showFixoDialog, setShowFixoDialog] = useState(false);
   const [showInvestimentoDialog, setShowInvestimentoDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  
-  const fileInputRef = useRef(null);
 
   // Load all data from API on startup
   useEffect(() => {
@@ -196,39 +194,6 @@ function App() {
     
     return { renda, despesas, resultado, totalInvestido, categorias };
   }, [lancamentosFiltrados, investimentosFiltrados]);
-
-  // Backup & Restore
-  const handleBackup = () => {
-    const data = { lancamentos, fixos, investimentos };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finsystem-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    toast.success("Backup realizado com sucesso!");
-  };
-
-  const handleRestore = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (window.confirm("Isso irá sobrescrever todos os dados. Continuar?")) {
-            setLancamentos(data.lancamentos || []);
-            setFixos(data.fixos || []);
-            setInvestimentos(data.investimentos || []);
-            toast.success("Dados restaurados com sucesso!");
-          }
-        } catch (error) {
-          toast.error("Erro ao importar arquivo");
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
 
   // CRUD Lancamentos
   const salvarLancamento = async (formData) => {
@@ -552,18 +517,6 @@ function App() {
                   />
                 </>
               )}
-            </div>
-
-            <div className="backup-section">
-              <Button variant="outline" size="sm" onClick={handleBackup} className="backup-btn" data-testid="backup-btn">
-                <Download size={16} />
-                {sidebarOpen && <span>Backup</span>}
-              </Button>
-              <Button variant="outline" size="sm" className="backup-btn" onClick={() => fileInputRef.current?.click()} data-testid="restore-btn">
-                <Upload size={16} />
-                {sidebarOpen && <span>Restaurar</span>}
-              </Button>
-              <input ref={fileInputRef} type="file" accept=".json" onChange={handleRestore} style={{ display: 'none' }} />
             </div>
           </div>
         </aside>
