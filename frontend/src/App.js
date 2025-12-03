@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import "@/App.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
+import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
 import {
   getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
   getFixos, createFixo, updateFixo, deleteFixoAPI,
@@ -42,39 +42,40 @@ function App() {
   const [showInvestimentoDialog, setShowInvestimentoDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
+  // Centralized data fetching function
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Carregando dados da API...');
+      
+      const [lancamentosData, fixosData, investimentosData] = await Promise.all([
+        getLancamentos(),
+        getFixos(),
+        getInvestimentos()
+      ]);
+      
+      setLancamentos(lancamentosData || []);
+      setFixos(fixosData || []);
+      setInvestimentos(investimentosData || []);
+      
+      console.log('✅ Dados carregados com sucesso:', {
+        lancamentos: lancamentosData?.length || 0,
+        fixos: fixosData?.length || 0,
+        investimentos: investimentosData?.length || 0,
+      });
+
+    } catch (error) {
+      toast.error("Erro ao carregar os dados. Tente recarregar a página.");
+      console.error("Erro ao carregar dados da API:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Load all data from API on startup
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        console.log('🔄 Carregando dados da API...');
-        
-        const [lancamentosData, fixosData, investimentosData] = await Promise.all([
-          getLancamentos(),
-          getFixos(),
-          getInvestimentos()
-        ]);
-        
-        setLancamentos(lancamentosData || []);
-        setFixos(fixosData || []);
-        setInvestimentos(investimentosData || []);
-        
-        console.log('✅ Dados carregados com sucesso:', {
-          lancamentos: lancamentosData?.length || 0,
-          fixos: fixosData?.length || 0,
-          investimentos: investimentosData?.length || 0,
-        });
-
-      } catch (error) {
-        toast.error("Erro ao carregar os dados. Tente recarregar a página.");
-        console.error("Erro ao carregar dados da API:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Auto-generate lancamentos from fixos
   useEffect(() => {
@@ -126,9 +127,9 @@ function App() {
 
     if (novosLancamentosParaCriar.length > 0) {
       try {
-        const criados = await Promise.all(novosLancamentosParaCriar.map(createLancamento));
-        setLancamentos(prev => [...prev, ...criados]);
-        toast.info(`${criados.length} lançamento(s) gerado(s) a partir das contas fixas.`);
+        await Promise.all(novosLancamentosParaCriar.map(createLancamento));
+        toast.info(`${novosLancamentosParaCriar.length} lançamento(s) gerado(s) a partir das contas fixas.`);
+        await fetchData(); // Re-fetch data after auto-generation
       } catch (error) {
         toast.error("Erro ao gerar lançamentos automáticos.");
       }
@@ -163,13 +164,8 @@ function App() {
     });
   }, [investimentos, periodoTipo, periodoMes, periodoAno, periodoInicio, periodoFim]);
 
-  // Calculate dashboard stats - ALWAYS recalculate
+  // Calculate dashboard stats
   const stats = useMemo(() => {
-    console.log('Recalculando stats...', { 
-      lancamentos: lancamentosFiltrados.length, 
-      investimentos: investimentosFiltrados.length 
-    });
-    
     const renda = lancamentosFiltrados
       .filter(l => l.tipo === 'entrada')
       .reduce((sum, l) => sum + (Number(l.valor) || 0), 0);
@@ -190,8 +186,6 @@ function App() {
         categorias[l.categoria] = (categorias[l.categoria] || 0) + (Number(l.valor) || 0);
       });
 
-    console.log('Stats calculados:', { renda, despesas, resultado, totalInvestido });
-    
     return { renda, despesas, resultado, totalInvestido, categorias };
   }, [lancamentosFiltrados, investimentosFiltrados]);
 
@@ -199,16 +193,15 @@ function App() {
   const salvarLancamento = async (formData) => {
     try {
       if (editingItem) {
-        const updatedLancamento = await updateLancamento(editingItem.id, formData);
-        setLancamentos(prev => prev.map(l => l.id === editingItem.id ? updatedLancamento : l));
+        await updateLancamento(editingItem.id, formData);
         toast.success("Lançamento atualizado!");
       } else {
-        const newLancamento = await createLancamento({ ...formData, origem: 'manual' });
-        setLancamentos(prev => [...prev, newLancamento]);
+        await createLancamento({ ...formData, origem: 'manual' });
         toast.success("Lançamento criado!");
       }
       setShowLancamentoDialog(false);
       setEditingItem(null);
+      await fetchData(); // Re-fetch all data
     } catch (error) {
       toast.error("Erro ao salvar lançamento.");
     }
@@ -218,8 +211,8 @@ function App() {
     if (window.confirm("Deseja realmente excluir?")) {
       try {
         await deleteLancamentoAPI(id);
-        setLancamentos(prev => prev.filter(l => l.id !== id));
         toast.success("Lançamento excluído!");
+        await fetchData(); // Re-fetch all data
       } catch (error) {
         toast.error("Erro ao excluir lançamento.");
       }
@@ -230,16 +223,15 @@ function App() {
   const salvarFixo = async (formData) => {
     try {
       if (editingItem) {
-        const updatedFixo = await updateFixo(editingItem.id, formData);
-        setFixos(prev => prev.map(f => f.id === editingItem.id ? updatedFixo : f));
+        await updateFixo(editingItem.id, formData);
         toast.success("Fixo atualizado!");
       } else {
-        const newFixo = await createFixo(formData);
-        setFixos(prev => [...prev, newFixo]);
+        await createFixo(formData);
         toast.success("Fixo criado!");
       }
       setShowFixoDialog(false);
       setEditingItem(null);
+      await fetchData(); // Re-fetch all data
     } catch (error) {
       toast.error("Erro ao salvar fixo.");
     }
@@ -249,8 +241,8 @@ function App() {
     if (window.confirm("Deseja realmente excluir?")) {
       try {
         await deleteFixoAPI(id);
-        setFixos(prev => prev.filter(f => f.id !== id));
         toast.success("Fixo excluído!");
+        await fetchData(); // Re-fetch all data
       } catch (error) {
         toast.error("Erro ao excluir fixo.");
       }
@@ -261,16 +253,15 @@ function App() {
   const salvarInvestimento = async (formData) => {
     try {
       if (editingItem) {
-        const updatedInvestimento = await updateInvestimento(editingItem.id, formData);
-        setInvestimentos(prev => prev.map(inv => inv.id === editingItem.id ? updatedInvestimento : inv));
+        await updateInvestimento(editingItem.id, formData);
         toast.success("Investimento atualizado!");
       } else {
-        const newInvestimento = await createInvestimento(formData);
-        setInvestimentos(prev => [...prev, newInvestimento]);
+        await createInvestimento(formData);
         toast.success("Investimento criado!");
       }
       setShowInvestimentoDialog(false);
       setEditingItem(null);
+      await fetchData(); // Re-fetch all data
     } catch (error) {
       toast.error("Erro ao salvar investimento.");
     }
@@ -280,41 +271,31 @@ function App() {
     if (window.confirm("Deseja realmente excluir?")) {
       try {
         await deleteInvestimentoAPI(id);
-        setInvestimentos(prev => prev.filter(inv => inv.id !== id));
         toast.success("Investimento excluído!");
+        await fetchData(); // Re-fetch all data
       } catch (error) {
         toast.error("Erro ao excluir investimento.");
       }
     }
   };
 
-  // Pagamento Inteligente Algorithm - CORRIGIDO
+  // Pagamento Inteligente Algorithm
   const calcularPagamentoInteligente = () => {
-    const mesAtual = periodoTipo === "mes" ? periodoMes : `${new Date().getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    
-    console.log('Calculando Pagamento Inteligente para:', mesAtual);
-    console.log('Fixos disponíveis:', fixos.length);
+    const mesAtual = periodoTipo === "mes" ? periodoMes : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     
     const rendas = fixos
       .filter(f => {
         if (!f.ativo || f.tipo !== 'entrada') return false;
-        
         try {
           const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
           const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
-          
           if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
-          
           if (f.mesFim) {
             const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
             if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
           }
-          
           return true;
-        } catch (e) {
-          console.error('Erro ao processar fixo:', f, e);
-          return false;
-        }
+        } catch (e) { return false; }
       })
       .map(f => ({
         descricao: f.descricao,
@@ -327,23 +308,16 @@ function App() {
     const despesas = fixos
       .filter(f => {
         if (!f.ativo || f.tipo !== 'saida') return false;
-        
         try {
           const [anoInicio, mesInicio] = f.mesInicio.split('-').map(Number);
           const [anoAtual, mesAtualNum] = mesAtual.split('-').map(Number);
-          
           if (anoAtual < anoInicio || (anoAtual === anoInicio && mesAtualNum < mesInicio)) return false;
-          
           if (f.mesFim) {
             const [anoFim, mesFim] = f.mesFim.split('-').map(Number);
             if (anoAtual > anoFim || (anoAtual === anoFim && mesAtualNum > mesFim)) return false;
           }
-          
           return true;
-        } catch (e) {
-          console.error('Erro ao processar fixo:', f, e);
-          return false;
-        }
+        } catch (e) { return false; }
       })
       .map(f => ({
         descricao: f.descricao,
@@ -352,29 +326,20 @@ function App() {
         categoria: f.categoria
       }))
       .sort((a, b) => a.diaVencimento - b.diaVencimento);
-    
-    console.log('Rendas encontradas:', rendas.length, rendas);
-    console.log('Despesas encontradas:', despesas.length, despesas);
 
     const distribuicao = [];
-    
     despesas.forEach(desp => {
       let rendaUsada = rendas.find(r => r.dia <= desp.diaVencimento && r.saldo >= desp.valor);
-      
       if (!rendaUsada) {
         rendaUsada = rendas.find(r => r.saldo >= desp.valor);
       }
-      
       if (!rendaUsada) {
-        rendaUsada = rendas[0];
+        rendaUsada = rendas.length > 0 ? rendas[0] : null;
       }
-
       const aviso = rendaUsada && rendaUsada.dia <= desp.diaVencimento ? "✅ Ok" : "⚠ Paga depois";
-      
       if (rendaUsada) {
         rendaUsada.saldo -= desp.valor;
       }
-
       distribuicao.push({
         despesa: desp.descricao,
         vencimento: desp.diaVencimento,
@@ -388,7 +353,6 @@ function App() {
     const totalRendas = rendas.reduce((sum, r) => sum + r.valor, 0);
     const totalDespesas = despesas.reduce((sum, d) => sum + d.valor, 0);
     const saldoFinal = totalRendas - totalDespesas;
-
     let analise = "";
     if (saldoFinal >= 1000) {
       analise = "✅ Mês saudável. Dá pra pensar em investir ou comprar algo planejado.";
@@ -397,7 +361,6 @@ function App() {
     } else {
       analise = "❌ Mês no vermelho. Ideal cortar gastos variáveis ou renegociar contas.";
     }
-
     return { rendas, distribuicao, totalRendas, totalDespesas, saldoFinal, analise };
   };
 
@@ -407,131 +370,134 @@ function App() {
     <>
       <Toaster position="top-right" />
       <div className="app-container">
-        {/* Sidebar */}
-        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-          <div className="sidebar-header">
-            <div className="logo">
-              <Wallet className="logo-icon" />
-              {sidebarOpen && <span className="logo-text">FinSystem</span>}
-            </div>
-            <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="menu-toggle-btn">
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
-
-          <nav className="nav-menu">
-            <button 
-              className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('dashboard')}
-              data-testid="nav-dashboard-btn"
-            >
-              <LayoutDashboard size={20} />
-              {sidebarOpen && <span>Dashboard</span>}
-            </button>
-            <button 
-              className={`nav-item ${currentView === 'lancamentos' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('lancamentos')}
-              data-testid="nav-lancamentos-btn"
-            >
-              <Receipt size={20} />
-              {sidebarOpen && <span>Lançamentos</span>}
-            </button>
-            <button 
-              className={`nav-item ${currentView === 'fixos' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('fixos')}
-              data-testid="nav-fixos-btn"
-            >
-              <Repeat size={20} />
-              {sidebarOpen && <span>Fixos</span>}
-            </button>
-            <button 
-              className={`nav-item ${currentView === 'pagamento' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('pagamento')}
-              data-testid="nav-pagamento-btn"
-            >
-              <Zap size={20} />
-              {sidebarOpen && <span>Pag. Inteligente</span>}
-            </button>
-            <button 
-              className={`nav-item ${currentView === 'investimentos' ? 'active' : ''}`} 
-              onClick={() => setCurrentView('investimentos')}
-              data-testid="nav-investimentos-btn"
-            >
-              <TrendingUp size={20} />
-              {sidebarOpen && <span>Investimentos</span>}
-            </button>
-          </nav>
-
-          <div className="sidebar-footer">
-            <div className="filter-section">
-              {sidebarOpen && <Label className="filter-label">Período</Label>}
-              <select 
-                value={periodoTipo} 
-                onChange={(e) => setPeriodoTipo(e.target.value)}
-                className="filter-select"
-                data-testid="periodo-tipo-select"
-              >
-                <option value="mes">Mês</option>
-                <option value="ano">Ano</option>
-                <option value="intervalo">Intervalo</option>
-              </select>
-
-              {periodoTipo === "mes" && (
-                <Input 
-                  type="month" 
-                  value={periodoMes} 
-                  onChange={(e) => setPeriodoMes(e.target.value)}
-                  className="filter-input"
-                  data-testid="periodo-mes-input"
-                />
-              )}
-
-              {periodoTipo === "ano" && (
-                <Input 
-                  type="number" 
-                  value={periodoAno} 
-                  onChange={(e) => setPeriodoAno(e.target.value)}
-                  placeholder="2025"
-                  className="filter-input"
-                  data-testid="periodo-ano-input"
-                />
-              )}
-
-              {periodoTipo === "intervalo" && (
-                <>
-                  <Input 
-                    type="date" 
-                    value={periodoInicio} 
-                    onChange={(e) => setPeriodoInicio(e.target.value)}
-                    placeholder="Início"
-                    className="filter-input"
-                    data-testid="periodo-inicio-input"
+              {/* Sidebar */}
+              <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+                <div className="sidebar-header">
+                  <div className="logo">
+                    <Wallet className="logo-icon" />
+                    {sidebarOpen && <span className="logo-text">FinSystem</span>}
+                  </div>
+                  {/* The toggle button is now outside */}
+                </div>
+      
+                <nav className="nav-menu">
+                  <button 
+                    className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('dashboard')}
+                    data-testid="nav-dashboard-btn"
+                  >
+                    <LayoutDashboard size={20} />
+                    {sidebarOpen && <span>Dashboard</span>}
+                  </button>
+                  <button 
+                    className={`nav-item ${currentView === 'lancamentos' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('lancamentos')}
+                    data-testid="nav-lancamentos-btn"
+                  >
+                    <Receipt size={20} />
+                    {sidebarOpen && <span>Lançamentos</span>}
+                  </button>
+                  <button 
+                    className={`nav-item ${currentView === 'fixos' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('fixos')}
+                    data-testid="nav-fixos-btn"
+                  >
+                    <Repeat size={20} />
+                    {sidebarOpen && <span>Fixos</span>}
+                  </button>
+                  <button 
+                    className={`nav-item ${currentView === 'pagamento' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('pagamento')}
+                    data-testid="nav-pagamento-btn"
+                  >
+                    <Zap size={20} />
+                    {sidebarOpen && <span>Pag. Inteligente</span>}
+                  </button>
+                  <button 
+                    className={`nav-item ${currentView === 'investimentos' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('investimentos')}
+                    data-testid="nav-investimentos-btn"
+                  >
+                    <TrendingUp size={20} />
+                    {sidebarOpen && <span>Investimentos</span>}
+                  </button>
+                </nav>
+      
+                <div className="sidebar-footer">
+                  <div className="filter-section">
+                    {sidebarOpen && <Label className="filter-label">Período</Label>}
+                    <select 
+                      value={periodoTipo} 
+                      onChange={(e) => setPeriodoTipo(e.target.value)}
+                      className="filter-select"
+                      data-testid="periodo-tipo-select"
+                    >
+                      <option value="mes">Mês</option>
+                      <option value="ano">Ano</option>
+                      <option value="intervalo">Intervalo</option>
+                    </select>
+      
+                    {periodoTipo === "mes" && (
+                      <Input 
+                        type="month" 
+                        value={periodoMes} 
+                        onChange={(e) => setPeriodoMes(e.target.value)}
+                        className="filter-input"
+                        data-testid="periodo-mes-input"
+                      />
+                    )}
+      
+                    {periodoTipo === "ano" && (
+                      <Input 
+                        type="number" 
+                        value={periodoAno} 
+                        onChange={(e) => setPeriodoAno(e.target.value)}
+                        placeholder="2025"
+                        className="filter-input"
+                        data-testid="periodo-ano-input"
+                      />
+                    )}
+      
+                    {periodoTipo === "intervalo" && (
+                      <>
+                        <Input 
+                          type="date" 
+                          value={periodoInicio} 
+                          onChange={(e) => setPeriodoInicio(e.target.value)}
+                          placeholder="Início"
+                          className="filter-input"
+                          data-testid="periodo-inicio-input"
+                        />
+                        <Input 
+                          type="date" 
+                          value={periodoFim} 
+                          onChange={(e) => setPeriodoFim(e.target.value)}
+                          placeholder="Fim"
+                          className="filter-input"
+                          data-testid="periodo-fim-input"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </aside>
+      
+              {/* This button now lives outside the sidebar */}
+              <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="menu-toggle-btn">
+                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+      
+              {/* Main Content */}
+              <main className="main-content">
+                {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} />}
+                {currentView === "lancamentos" && (
+                  <LancamentosView 
+                    lancamentos={lancamentosFiltrados} 
+                    onAdd={() => { setEditingItem(null); setShowLancamentoDialog(true); }}
+                    onEdit={(item) => { setEditingItem(item); setShowLancamentoDialog(true); }}
+                    onDelete={deletarLancamento}
                   />
-                  <Input 
-                    type="date" 
-                    value={periodoFim} 
-                    onChange={(e) => setPeriodoFim(e.target.value)}
-                    placeholder="Fim"
-                    className="filter-input"
-                    data-testid="periodo-fim-input"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="main-content">
-          {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} />}
-          {currentView === "lancamentos" && (
-            <LancamentosView 
-              lancamentos={lancamentosFiltrados} 
-              onAdd={() => { setEditingItem(null); setShowLancamentoDialog(true); }}
-              onEdit={(item) => { setEditingItem(item); setShowLancamentoDialog(true); }}
-              onDelete={deletarLancamento}
-            />
-          )}
+                )}
           {currentView === "fixos" && (
             <FixosView 
               fixos={fixos} 
@@ -655,7 +621,7 @@ function DashboardView({ stats, lancamentos }) {
             {topCategorias.length > 0 ? (
               <div className="categoria-list">
                 {topCategorias.map(([cat, valor]) => {
-                  const percentual = ((valor / stats.despesas) * 100).toFixed(1);
+                  const percentual = stats.despesas > 0 ? ((valor / stats.despesas) * 100).toFixed(1) : 0;
                   return (
                     <div key={cat} className="categoria-item">
                       <div className="categoria-info">
@@ -686,7 +652,7 @@ function DashboardView({ stats, lancamentos }) {
                   <div key={l.id} className="lancamento-item">
                     <div>
                       <p className="lancamento-desc">{l.descricao}</p>
-                      <p className="lancamento-data">{new Date(l.data).toLocaleDateString('pt-BR')}</p>
+                      <p className="lancamento-data">{new Date(l.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</p>
                     </div>
                     <Badge variant={l.tipo === 'entrada' ? 'default' : 'destructive'}>
                       {l.tipo === 'entrada' ? '+' : '-'} R$ {l.valor.toFixed(2)}
@@ -734,7 +700,7 @@ function LancamentosView({ lancamentos, onAdd, onEdit, onDelete }) {
                 {lancamentos.length > 0 ? (
                   lancamentos.sort((a, b) => new Date(b.data) - new Date(a.data)).map(l => (
                     <TableRow key={l.id}>
-                      <TableCell>{new Date(l.data).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{new Date(l.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
                       <TableCell>{l.descricao}</TableCell>
                       <TableCell>{l.categoria}</TableCell>
                       <TableCell>
@@ -971,7 +937,7 @@ function InvestimentosView({ investimentos, totalInvestido, saldoPlanejado, onAd
                 {investimentos.length > 0 ? (
                   investimentos.sort((a, b) => new Date(b.data) - new Date(a.data)).map(inv => (
                     <TableRow key={inv.id}>
-                      <TableCell>{new Date(inv.data).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{new Date(inv.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
                       <TableCell>{inv.ativo}</TableCell>
                       <TableCell>R$ {inv.valor.toFixed(2)}</TableCell>
                       <TableCell>{inv.origem || '-'}</TableCell>
