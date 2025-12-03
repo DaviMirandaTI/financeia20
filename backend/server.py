@@ -173,6 +173,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_db_client():
+    try:
+        # Send a ping to confirm a successful connection
+        await client.admin.command('ping')
+        logger.info("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
