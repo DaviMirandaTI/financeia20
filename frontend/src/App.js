@@ -693,6 +693,7 @@ function LancamentosView({ lancamentos, onAdd, onEdit, onDelete }) {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Forma</TableHead>
+                  <TableHead>Responsável</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -710,6 +711,7 @@ function LancamentosView({ lancamentos, onAdd, onEdit, onDelete }) {
                       </TableCell>
                       <TableCell>R$ {l.valor.toFixed(2)}</TableCell>
                       <TableCell>{l.forma}</TableCell>
+                      <TableCell>{l.responsavel || '-'}</TableCell>
                       <TableCell>
                         <div className="action-buttons">
                           <Button variant="ghost" size="sm" onClick={() => onEdit(l)} data-testid={`edit-lancamento-${l.id}`}>Editar</Button>
@@ -720,7 +722,7 @@ function LancamentosView({ lancamentos, onAdd, onEdit, onDelete }) {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">Nenhum lançamento no período</TableCell>
+                    <TableCell colSpan={8} className="text-center py-8">Nenhum lançamento no período</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -972,23 +974,26 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
     tipo: 'saida',
     valor: '',
     forma: 'pix',
+    responsavel: 'Davi',
     observacao: ''
   });
 
   useEffect(() => {
     if (open) {
+      const defaultData = {
+        data: new Date().toISOString().split('T')[0],
+        descricao: '',
+        categoria: 'Outros',
+        tipo: 'saida',
+        valor: '',
+        forma: 'pix',
+        responsavel: 'Davi',
+        observacao: ''
+      };
       if (editingItem) {
-        setFormData(editingItem);
+        setFormData({ ...defaultData, ...editingItem });
       } else {
-        setFormData({
-          data: new Date().toISOString().split('T')[0],
-          descricao: '',
-          categoria: 'Outros',
-          tipo: 'saida',
-          valor: '',
-          forma: 'pix',
-          observacao: ''
-        });
+        setFormData(defaultData);
       }
     }
   }, [editingItem, open]);
@@ -1080,6 +1085,19 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
               <option value="dinheiro">Dinheiro</option>
               <option value="boleto">Boleto</option>
               <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <Label>Responsável</Label>
+            <select 
+              value={formData.responsavel} 
+              onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="lancamento-responsavel-select"
+            >
+              <option value="Davi">Davi</option>
+              <option value="Ana">Ana</option>
+              <option value="Outro">Outro</option>
             </select>
           </div>
           <div className="col-span-2">

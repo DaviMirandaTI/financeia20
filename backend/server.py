@@ -42,6 +42,7 @@ class Lancamento(BaseModel):
     tipo: str  # 'entrada' | 'saida'
     valor: float
     forma: str  # 'pix' | 'debito' | 'credito' | 'dinheiro' | 'boleto' | 'outro'
+    responsavel: Optional[str] = None # 'Davi' | 'Ana' | 'Outro'
     origem: Optional[str] = None  # 'manual' | 'fixo'
     observacao: Optional[str] = None
 
