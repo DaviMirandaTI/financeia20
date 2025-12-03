@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
+import {
+  getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
+  getFixos, createFixo, updateFixo, deleteFixoAPI,
+  getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI
+} from './lib/api';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -19,6 +24,7 @@ function App() {
   const [lancamentos, setLancamentos] = useState([]);
   const [fixos, setFixos] = useState([]);
   const [investimentos, setInvestimentos] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Filter states
   const [periodoTipo, setPeriodoTipo] = useState("mes");
@@ -38,60 +44,51 @@ function App() {
   
   const fileInputRef = useRef(null);
 
-  // Load data from localStorage
+  // Load all data from API on startup
   useEffect(() => {
-    console.log('🔄 Carregando dados do localStorage...');
-    const savedLancamentos = localStorage.getItem('fs_lancamentos');
-    const savedFixos = localStorage.getItem('fs_fixos');
-    const savedInvestimentos = localStorage.getItem('fs_investimentos');
-    
-    if (savedLancamentos) {
-      const parsed = JSON.parse(savedLancamentos);
-      console.log('✅ Lançamentos carregados:', parsed.length);
-      setLancamentos(parsed);
-    }
-    if (savedFixos) {
-      const parsed = JSON.parse(savedFixos);
-      console.log('✅ Fixos carregados:', parsed.length);
-      setFixos(parsed);
-    }
-    if (savedInvestimentos) {
-      const parsed = JSON.parse(savedInvestimentos);
-      console.log('✅ Investimentos carregados:', parsed.length);
-      setInvestimentos(parsed);
-    }
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        console.log('🔄 Carregando dados da API...');
+        
+        const [lancamentosData, fixosData, investimentosData] = await Promise.all([
+          getLancamentos(),
+          getFixos(),
+          getInvestimentos()
+        ]);
+        
+        setLancamentos(lancamentosData || []);
+        setFixos(fixosData || []);
+        setInvestimentos(investimentosData || []);
+        
+        console.log('✅ Dados carregados com sucesso:', {
+          lancamentos: lancamentosData?.length || 0,
+          fixos: fixosData?.length || 0,
+          investimentos: investimentosData?.length || 0,
+        });
+
+      } catch (error) {
+        toast.error("Erro ao carregar os dados. Tente recarregar a página.");
+        console.error("Erro ao carregar dados da API:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    if (lancamentos.length > 0 || localStorage.getItem('fs_lancamentos')) {
-      console.log('💾 Salvando lançamentos:', lancamentos.length);
-      localStorage.setItem('fs_lancamentos', JSON.stringify(lancamentos));
-    }
-  }, [lancamentos]);
-
-  useEffect(() => {
-    if (fixos.length > 0 || localStorage.getItem('fs_fixos')) {
-      console.log('💾 Salvando fixos:', fixos.length);
-      localStorage.setItem('fs_fixos', JSON.stringify(fixos));
-    }
-  }, [fixos]);
-
-  useEffect(() => {
-    if (investimentos.length > 0 || localStorage.getItem('fs_investimentos')) {
-      console.log('💾 Salvando investimentos:', investimentos.length);
-      localStorage.setItem('fs_investimentos', JSON.stringify(investimentos));
-    }
-  }, [investimentos]);
 
   // Auto-generate lancamentos from fixos
   useEffect(() => {
-    if (periodoTipo === "mes" && periodoMes) {
-      gerarLancamentosDoMes(periodoMes);
-    }
-  }, [fixos, periodoMes, periodoTipo]);
+    const runGerarLancamentos = async () => {
+      if (periodoTipo === "mes" && periodoMes && !loading) {
+        await gerarLancamentosDoMes(periodoMes);
+      }
+    };
+    runGerarLancamentos();
+  }, [fixos, periodoMes, periodoTipo, loading]);
 
-  const gerarLancamentosDoMes = (mesSelecionado) => {
+  const gerarLancamentosDoMes = async (mesSelecionado) => {
     const [ano, mes] = mesSelecionado.split('-').map(Number);
     const fixosAtivos = fixos.filter(f => {
       if (!f.ativo) return false;
@@ -104,7 +101,8 @@ function App() {
       return true;
     });
 
-    fixosAtivos.forEach(fixo => {
+    const novosLancamentosParaCriar = [];
+    for (const fixo of fixosAtivos) {
       const diaValido = Math.min(fixo.diaVencimento, new Date(ano, mes, 0).getDate());
       const dataLancamento = `${ano}-${String(mes).padStart(2, '0')}-${String(diaValido).padStart(2, '0')}`;
       
@@ -115,8 +113,7 @@ function App() {
       );
 
       if (!jaExiste) {
-        const novoLancamento = {
-          id: crypto.randomUUID(),
+        novosLancamentosParaCriar.push({
           data: dataLancamento,
           descricao: fixo.descricao,
           categoria: fixo.categoria,
@@ -125,10 +122,19 @@ function App() {
           forma: 'boleto',
           origem: 'fixo',
           observacao: `Gerado automaticamente de: ${fixo.descricao}`
-        };
-        setLancamentos(prev => [...prev, novoLancamento]);
+        });
       }
-    });
+    }
+
+    if (novosLancamentosParaCriar.length > 0) {
+      try {
+        const criados = await Promise.all(novosLancamentosParaCriar.map(createLancamento));
+        setLancamentos(prev => [...prev, ...criados]);
+        toast.info(`${criados.length} lançamento(s) gerado(s) a partir das contas fixas.`);
+      } catch (error) {
+        toast.error("Erro ao gerar lançamentos automáticos.");
+      }
+    }
   };
 
   // Filter lancamentos by period
@@ -225,62 +231,95 @@ function App() {
   };
 
   // CRUD Lancamentos
-  const salvarLancamento = (formData) => {
-    if (editingItem) {
-      setLancamentos(prev => prev.map(l => l.id === editingItem.id ? { ...formData, id: editingItem.id } : l));
-      toast.success("Lançamento atualizado!");
-    } else {
-      setLancamentos(prev => [...prev, { ...formData, id: crypto.randomUUID(), origem: 'manual' }]);
-      toast.success("Lançamento criado!");
+  const salvarLancamento = async (formData) => {
+    try {
+      if (editingItem) {
+        const updatedLancamento = await updateLancamento(editingItem.id, formData);
+        setLancamentos(prev => prev.map(l => l.id === editingItem.id ? updatedLancamento : l));
+        toast.success("Lançamento atualizado!");
+      } else {
+        const newLancamento = await createLancamento({ ...formData, origem: 'manual' });
+        setLancamentos(prev => [...prev, newLancamento]);
+        toast.success("Lançamento criado!");
+      }
+      setShowLancamentoDialog(false);
+      setEditingItem(null);
+    } catch (error) {
+      toast.error("Erro ao salvar lançamento.");
     }
-    setShowLancamentoDialog(false);
-    setEditingItem(null);
   };
 
-  const deletarLancamento = (id) => {
+  const deletarLancamento = async (id) => {
     if (window.confirm("Deseja realmente excluir?")) {
-      setLancamentos(prev => prev.filter(l => l.id !== id));
-      toast.success("Lançamento excluído!");
+      try {
+        await deleteLancamentoAPI(id);
+        setLancamentos(prev => prev.filter(l => l.id !== id));
+        toast.success("Lançamento excluído!");
+      } catch (error) {
+        toast.error("Erro ao excluir lançamento.");
+      }
     }
   };
 
   // CRUD Fixos
-  const salvarFixo = (formData) => {
-    if (editingItem) {
-      setFixos(prev => prev.map(f => f.id === editingItem.id ? { ...formData, id: editingItem.id } : f));
-      toast.success("Fixo atualizado!");
-    } else {
-      setFixos(prev => [...prev, { ...formData, id: crypto.randomUUID() }]);
-      toast.success("Fixo criado!");
+  const salvarFixo = async (formData) => {
+    try {
+      if (editingItem) {
+        const updatedFixo = await updateFixo(editingItem.id, formData);
+        setFixos(prev => prev.map(f => f.id === editingItem.id ? updatedFixo : f));
+        toast.success("Fixo atualizado!");
+      } else {
+        const newFixo = await createFixo(formData);
+        setFixos(prev => [...prev, newFixo]);
+        toast.success("Fixo criado!");
+      }
+      setShowFixoDialog(false);
+      setEditingItem(null);
+    } catch (error) {
+      toast.error("Erro ao salvar fixo.");
     }
-    setShowFixoDialog(false);
-    setEditingItem(null);
   };
 
-  const deletarFixo = (id) => {
+  const deletarFixo = async (id) => {
     if (window.confirm("Deseja realmente excluir?")) {
-      setFixos(prev => prev.filter(f => f.id !== id));
-      toast.success("Fixo excluído!");
+      try {
+        await deleteFixoAPI(id);
+        setFixos(prev => prev.filter(f => f.id !== id));
+        toast.success("Fixo excluído!");
+      } catch (error) {
+        toast.error("Erro ao excluir fixo.");
+      }
     }
   };
 
   // CRUD Investimentos
-  const salvarInvestimento = (formData) => {
-    if (editingItem) {
-      setInvestimentos(prev => prev.map(inv => inv.id === editingItem.id ? { ...formData, id: editingItem.id } : inv));
-      toast.success("Investimento atualizado!");
-    } else {
-      setInvestimentos(prev => [...prev, { ...formData, id: crypto.randomUUID() }]);
-      toast.success("Investimento criado!");
+  const salvarInvestimento = async (formData) => {
+    try {
+      if (editingItem) {
+        const updatedInvestimento = await updateInvestimento(editingItem.id, formData);
+        setInvestimentos(prev => prev.map(inv => inv.id === editingItem.id ? updatedInvestimento : inv));
+        toast.success("Investimento atualizado!");
+      } else {
+        const newInvestimento = await createInvestimento(formData);
+        setInvestimentos(prev => [...prev, newInvestimento]);
+        toast.success("Investimento criado!");
+      }
+      setShowInvestimentoDialog(false);
+      setEditingItem(null);
+    } catch (error) {
+      toast.error("Erro ao salvar investimento.");
     }
-    setShowInvestimentoDialog(false);
-    setEditingItem(null);
   };
 
-  const deletarInvestimento = (id) => {
+  const deletarInvestimento = async (id) => {
     if (window.confirm("Deseja realmente excluir?")) {
-      setInvestimentos(prev => prev.filter(inv => inv.id !== id));
-      toast.success("Investimento excluído!");
+      try {
+        await deleteInvestimentoAPI(id);
+        setInvestimentos(prev => prev.filter(inv => inv.id !== id));
+        toast.success("Investimento excluído!");
+      } catch (error) {
+        toast.error("Erro ao excluir investimento.");
+      }
     }
   };
 
