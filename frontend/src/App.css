@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
+/* Force label visibility */
+label {
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
 * {
   margin: 0;
   padding: 0;
