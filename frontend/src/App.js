@@ -9,7 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
+import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign } from "lucide-react";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import {
+  getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
+  getFixos, createFixo, updateFixo, deleteFixoAPI,
+  getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI
+} from './lib/api';
 import {
   getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
   getFixos, createFixo, updateFixo, deleteFixoAPI,
@@ -489,11 +495,10 @@ function App() {
       
               {/* Main Content */}
               <main className="main-content">
-                {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} />}
-                {currentView === "lancamentos" && (
-                  <LancamentosView 
-                    lancamentos={lancamentosFiltrados} 
-                    onAdd={() => { setEditingItem(null); setShowLancamentoDialog(true); }}
+                        {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} saldoPlanejado={pagamentoInteligente.saldoFinal} />}
+                        {currentView === "lancamentos" && (
+                          <LancamentosView 
+                            lancamentos={lancamentosFiltrados}                     onAdd={() => { setEditingItem(null); setShowLancamentoDialog(true); }}
                     onEdit={(item) => { setEditingItem(item); setShowLancamentoDialog(true); }}
                     onDelete={deletarLancamento}
                   />
@@ -553,21 +558,23 @@ function App() {
 }
 
 // Dashboard View
-function DashboardView({ stats, lancamentos }) {
+function DashboardView({ stats, lancamentos, saldoPlanejado }) {
   const topCategorias = Object.entries(stats.categorias)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
+  const CHART_COLORS = ['#10b981', '#22d3ee', '#a855f7', '#fbbf24', '#f87171'];
+
   return (
     <div className="view-container" data-testid="dashboard-view">
-      <h1 className="view-title">Dashboard</h1>
+      <h1 className="view-title">Resumo Mensal</h1>
       
       <div className="stats-grid">
         <Card className="stat-card renda">
           <CardHeader>
             <CardTitle className="stat-title">
               <TrendingUp className="stat-icon" />
-              Renda
+              Renda do Período
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -579,7 +586,7 @@ function DashboardView({ stats, lancamentos }) {
           <CardHeader>
             <CardTitle className="stat-title">
               <TrendingDown className="stat-icon" />
-              Despesas
+              Despesas do Período
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -591,23 +598,23 @@ function DashboardView({ stats, lancamentos }) {
           <CardHeader>
             <CardTitle className="stat-title">
               <DollarSign className="stat-icon" />
-              Resultado
+              Saldo do Período
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="stat-value" data-testid="stat-resultado">R$ {stats.resultado.toFixed(2)}</p>
+            <p className={`stat-value ${stats.resultado >= 0 ? 'positivo' : 'negativo'}`} data-testid="stat-resultado">R$ {stats.resultado.toFixed(2)}</p>
           </CardContent>
         </Card>
-
+        
         <Card className="stat-card investido">
           <CardHeader>
             <CardTitle className="stat-title">
-              <Target className="stat-icon" />
-              Total Investido
+              <Zap className="stat-icon" />
+              Saldo Planejado
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="stat-value" data-testid="stat-investido">R$ {stats.totalInvestido.toFixed(2)}</p>
+            <p className={`stat-value ${saldoPlanejado >= 0 ? 'positivo' : 'negativo'}`} data-testid="stat-saldo-planejado">R$ {saldoPlanejado.toFixed(2)}</p>
           </CardContent>
         </Card>
       </div>
@@ -615,26 +622,31 @@ function DashboardView({ stats, lancamentos }) {
       <div className="charts-section">
         <Card className="chart-card">
           <CardHeader>
-            <CardTitle>Despesas por Categoria</CardTitle>
+            <CardTitle>Top 5 Despesas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {topCategorias.length > 0 ? (
-              <div className="categoria-list">
-                {topCategorias.map(([cat, valor]) => {
-                  const percentual = stats.despesas > 0 ? ((valor / stats.despesas) * 100).toFixed(1) : 0;
-                  return (
-                    <div key={cat} className="categoria-item">
-                      <div className="categoria-info">
-                        <span className="categoria-nome">{cat}</span>
-                        <span className="categoria-valor">R$ {valor.toFixed(2)} ({percentual}%)</span>
-                      </div>
-                      <div className="categoria-bar">
-                        <div className="categoria-fill" style={{ width: `${percentual}%` }}></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={topCategorias}
+                    dataKey="1"
+                    nameKey="0"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {topCategorias.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [`R$ ${value.toFixed(2)}`, name]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             ) : (
               <p className="empty-state">Nenhuma despesa registrada</p>
             )}

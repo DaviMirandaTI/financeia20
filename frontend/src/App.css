@@ -275,6 +275,14 @@ body {
   margin-top: 0.5rem;
 }
 
+.stat-value.positivo {
+  color: #10b981;
+}
+
+.stat-value.negativo {
+  color: #ef4444;
+}
+
 /* Charts Section */
 .charts-section {
   display: grid;
