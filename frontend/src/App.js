@@ -16,11 +16,6 @@ import {
   getFixos, createFixo, updateFixo, deleteFixoAPI,
   getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI
 } from './lib/api';
-import {
-  getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
-  getFixos, createFixo, updateFixo, deleteFixoAPI,
-  getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI
-} from './lib/api';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -1046,7 +1041,7 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.categoria} 
               onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="lancamento-categoria-select"
             >
               <option value="Alimentação">Alimentação</option>
@@ -1065,7 +1060,7 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.tipo} 
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="lancamento-tipo-select"
             >
               <option value="entrada">Entrada</option>
@@ -1088,7 +1083,7 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.forma} 
               onChange={(e) => setFormData({ ...formData, forma: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="lancamento-forma-select"
             >
               <option value="pix">PIX</option>
@@ -1104,7 +1099,7 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.responsavel} 
               onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="lancamento-responsavel-select"
             >
               <option value="Davi">Davi</option>
@@ -1196,7 +1191,7 @@ function FixoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.categoria} 
               onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="fixo-categoria-select"
             >
               <option value="Renda">Renda</option>
@@ -1213,7 +1208,7 @@ function FixoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.tipo} 
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="fixo-tipo-select"
             >
               <option value="entrada">Entrada</option>
@@ -1236,7 +1231,7 @@ function FixoDialog({ open, onOpenChange, onSave, editingItem }) {
             <select 
               value={formData.responsavel} 
               onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="fixo-responsavel-select"
             >
               <option value="Davi">Davi</option>
