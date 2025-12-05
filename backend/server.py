@@ -168,6 +168,10 @@ app.include_router(api_router)
 from routes.auth import auth_router
 app.include_router(auth_router)
 
+# Router de setup (temporário para rodar setup no Render)
+from routes.setup_run import setup_router
+app.include_router(setup_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
