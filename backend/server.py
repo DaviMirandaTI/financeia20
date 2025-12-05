@@ -161,8 +161,12 @@ async def delete_investimento(investimento_id: str):
     return
 
 
-# Include the router in the main app
+# Include routers
 app.include_router(api_router)
+
+# Router de autenticação
+from routes.auth import auth_router
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,
