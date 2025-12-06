@@ -73,7 +73,10 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Token não recebido');
     } catch (error) {
       console.error('Erro no login:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Erro ao fazer login';
+      const status = error.response?.status;
+      let errorMessage = error.response?.data?.detail || error.message || 'Erro ao fazer login';
+      if (status === 401) errorMessage = 'Email ou senha inválidos.';
+      if (status === 404) errorMessage = 'Servidor indisponível. Tente novamente em instantes.';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -95,7 +98,10 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Erro ao criar conta');
     } catch (error) {
       console.error('Erro no registro:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Erro ao criar conta';
+      const status = error.response?.status;
+      let errorMessage = error.response?.data?.detail || error.message || 'Erro ao criar conta';
+      if (status === 400) errorMessage = error.response?.data?.detail || 'Dados inválidos ou já usados.';
+      if (status === 404) errorMessage = 'Servidor indisponível. Tente novamente em instantes.';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {

@@ -70,3 +70,34 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     email: Optional[str] = None
 
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class RequestVerifyEmailResponse(BaseModel):
+    """Resposta simplificada contendo o token para fins de debug"""
+    token: str
+
+
+class RequestResetPassword(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    nova_senha: str = Field(..., min_length=6, max_length=100)
+
+
+class ChangePasswordPayload(BaseModel):
+    senha_atual: str = Field(..., min_length=6, max_length=100)
+    nova_senha: str = Field(..., min_length=6, max_length=100)
+
+
+class UpdateProfilePayload(BaseModel):
+    nome: Optional[str] = Field(None, min_length=2, max_length=100)
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    telefone: Optional[str] = Field(None, max_length=20)
+    foto_url: Optional[str] = Field(None, max_length=500)
+

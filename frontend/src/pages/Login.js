@@ -125,6 +125,16 @@ export default function Login() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-400">
+              Esqueceu a senha?{' '}
+              <Link
+                to="/forgot-password"
+                className="font-medium hover:underline"
+                style={{ color: '#10b981' }}
+              >
+                Recuperar
+              </Link>
+            </p>
+            <p className="text-sm text-gray-400 mt-2">
               Não tem uma conta?{' '}
               <Link
                 to="/register"

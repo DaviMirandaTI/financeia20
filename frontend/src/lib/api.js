@@ -128,3 +128,20 @@ export const getInvestimentos = () => fetchApi(`${API_BASE_URL}/api/investimento
 export const createInvestimento = (data) => fetchApi(`${API_BASE_URL}/api/investimentos`, { method: 'POST', body: JSON.stringify(data) });
 export const updateInvestimento = (id, data) => fetchApi(`${API_BASE_URL}/api/investimentos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteInvestimentoAPI = (id) => fetchApi(`${API_BASE_URL}/api/investimentos/${id}`, { method: 'DELETE' });
+
+// --- Auth avançada ---
+export const requestVerifyEmail = () => fetchApi(`${API_BASE_URL}/auth/request-verify-email`, { method: 'POST' });
+export const verifyEmail = (token) =>
+  fetchApi(`${API_BASE_URL}/auth/verify-email`, { method: 'POST', body: JSON.stringify({ token }) });
+
+export const requestResetPassword = (email) =>
+  fetchApi(`${API_BASE_URL}/auth/request-reset-password`, { method: 'POST', body: JSON.stringify({ email }) });
+
+export const resetPassword = (token, nova_senha) =>
+  fetchApi(`${API_BASE_URL}/auth/reset-password`, { method: 'POST', body: JSON.stringify({ token, nova_senha }) });
+
+export const changePassword = (senha_atual, nova_senha) =>
+  fetchApi(`${API_BASE_URL}/auth/change-password`, { method: 'POST', body: JSON.stringify({ senha_atual, nova_senha }) });
+
+export const updateProfile = (payload) =>
+  fetchApi(`${API_BASE_URL}/auth/profile`, { method: 'PUT', body: JSON.stringify(payload) });

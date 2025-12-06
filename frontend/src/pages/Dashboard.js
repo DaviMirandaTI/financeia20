@@ -2,6 +2,7 @@
 // Movido para Dashboard.js para ser usado como rota protegida
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import "@/App.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState("dashboard");
   
@@ -499,7 +501,20 @@ export default function Dashboard() {
                     )}
                   </div>
                   
-                  {/* Logout Button */}
+                  {/* Perfil / Logout */}
+                  {sidebarOpen && (
+                    <Button
+                      onClick={() => navigate('/profile')}
+                      variant="outline"
+                      className="w-full mt-2"
+                      style={{
+                        border: '1px solid rgba(34, 211, 238, 0.3)',
+                        color: '#22d3ee',
+                      }}
+                    >
+                      Perfil
+                    </Button>
+                  )}
                   {sidebarOpen && (
                     <Button
                       onClick={logout}

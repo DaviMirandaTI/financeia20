@@ -5,9 +5,21 @@ from datetime import datetime, timezone
 import uuid
 import logging
 
-from models.user import UserCreate, UserDB, UserResponse, Token
+from models.user import (
+    UserCreate,
+    UserDB,
+    UserResponse,
+    Token,
+    VerifyEmailRequest,
+    RequestVerifyEmailResponse,
+    RequestResetPassword,
+    ResetPasswordPayload,
+    ChangePasswordPayload,
+    UpdateProfilePayload,
+)
 from auth.security import get_password_hash, verify_password, create_access_token, decode_access_token
 from server import db  # Importa a conexão do MongoDB do server.py
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +142,31 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     return user
 
 
+async def create_token_record(collection: str, user_id: str, ttl_minutes: int) -> str:
+    """Cria token simples com expiração."""
+    token = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=ttl_minutes)
+    await db[collection].insert_one(
+        {
+            "token": token,
+            "user_id": user_id,
+            "created_at": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "used": False,
+        }
+    )
+    return token
+
+
+async def get_token_record(collection: str, token: str) -> Optional[dict]:
+    return await db[collection].find_one({"token": token})
+
+
+async def invalidate_token(collection: str, token: str):
+    await db[collection].update_one({"token": token}, {"$set": {"used": True}})
+
+
 @auth_router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
     """
@@ -234,4 +271,150 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     user_dict = current_user.copy()
     user_dict.pop("senha_hash", None)
     return UserResponse(**user_dict)
+
+
+# ---------------------------
+# Confirmação de email
+# ---------------------------
+
+
+@auth_router.post("/request-verify-email", response_model=RequestVerifyEmailResponse)
+async def request_verify_email(current_user: dict = Depends(get_current_user)):
+    """
+    Gera token de verificação de email e retorna (para fins de debug/dev).
+    Em produção, esse token deveria ser enviado por email.
+    """
+    if current_user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email já verificado")
+
+    token = await create_token_record("verification_tokens", current_user["id"], ttl_minutes=60 * 24)
+    logger.info(f"Token de verificação gerado para {current_user['email']}")
+    return RequestVerifyEmailResponse(token=token)
+
+
+@auth_router.post("/verify-email")
+async def verify_email(payload: VerifyEmailRequest):
+    token_doc = await get_token_record("verification_tokens", payload.token)
+    if not token_doc:
+        raise HTTPException(status_code=400, detail="Token inválido")
+
+    if token_doc.get("used"):
+        raise HTTPException(status_code=400, detail="Token já utilizado")
+
+    expires_at = datetime.fromisoformat(token_doc["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Token expirado")
+
+    user = await get_user_by_id(token_doc["user_id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    await db.users.update_one({"id": user["id"]}, {"$set": {"email_verified": True}})
+    await invalidate_token("verification_tokens", payload.token)
+
+    return {"detail": "Email verificado com sucesso"}
+
+
+# ---------------------------
+# Reset de senha
+# ---------------------------
+
+
+@auth_router.post("/request-reset-password")
+async def request_reset_password(payload: RequestResetPassword):
+    """
+    Gera token de reset de senha. Em produção, deve ser enviado por email.
+    Retornamos o token para facilitar testes.
+    """
+    user = await get_user_by_email(payload.email)
+    token = None
+    if user:
+        token = await create_token_record("reset_tokens", user["id"], ttl_minutes=60)
+        logger.info(f"Token de reset gerado para {payload.email}")
+    # Sempre responde 200 para não vazar existência de email
+    return {"detail": "Se o email existir, o token foi gerado.", "token": token}
+
+
+@auth_router.post("/reset-password")
+async def reset_password(payload: ResetPasswordPayload):
+    token_doc = await get_token_record("reset_tokens", payload.token)
+    if not token_doc:
+        raise HTTPException(status_code=400, detail="Token inválido")
+    if token_doc.get("used"):
+        raise HTTPException(status_code=400, detail="Token já utilizado")
+
+    expires_at = datetime.fromisoformat(token_doc["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Token expirado")
+
+    user = await get_user_by_id(token_doc["user_id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"senha_hash": get_password_hash(payload.nova_senha), "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    await invalidate_token("reset_tokens", payload.token)
+    logger.info(f"Senha redefinida para usuário {user['email']}")
+
+    return {"detail": "Senha redefinida com sucesso"}
+
+
+# ---------------------------
+# Troca de senha autenticado
+# ---------------------------
+
+
+@auth_router.post("/change-password")
+async def change_password(payload: ChangePasswordPayload, current_user: dict = Depends(get_current_user)):
+    if not verify_password(payload.senha_atual, current_user.get("senha_hash")):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"senha_hash": get_password_hash(payload.nova_senha), "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    logger.info(f"Senha alterada para usuário {current_user['email']}")
+    return {"detail": "Senha alterada com sucesso"}
+
+
+# ---------------------------
+# Atualização de perfil
+# ---------------------------
+
+
+@auth_router.put("/profile", response_model=UserResponse)
+async def update_profile(payload: UpdateProfilePayload, current_user: dict = Depends(get_current_user)):
+    updates = {}
+
+    if payload.nome is not None:
+        updates["nome"] = payload.nome
+    if payload.username is not None and payload.username.lower() != current_user.get("username"):
+        existing_username = await db.users.find_one({"username": payload.username.lower(), "id": {"$ne": current_user["id"]}})
+        if existing_username:
+            raise HTTPException(status_code=400, detail="Nome de usuário já cadastrado")
+        updates["username"] = payload.username.lower()
+    if payload.email is not None and payload.email.lower() != current_user.get("email"):
+        existing_email = await db.users.find_one({"email": payload.email.lower(), "id": {"$ne": current_user["id"]}})
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email já cadastrado")
+        updates["email"] = payload.email.lower()
+        updates["email_verified"] = False  # precisa reverificar
+    if payload.telefone is not None:
+        updates["telefone"] = payload.telefone
+    if payload.foto_url is not None:
+        updates["foto_url"] = payload.foto_url
+
+    if not updates:
+        return UserResponse(**{k: v for k, v in current_user.items() if k != "senha_hash"})
+
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.users.update_one({"id": current_user["id"]}, {"$set": updates})
+
+    # Retorna usuário atualizado
+    user = await get_user_by_id(current_user["id"])
+    user.pop("senha_hash", None)
+    return UserResponse(**user)
 
