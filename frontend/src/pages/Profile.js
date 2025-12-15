@@ -5,6 +5,7 @@ import {
   updateProfile,
   changePassword,
   uploadImage,
+  resetData,
 } from '../lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,13 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [loadingPwd, setLoadingPwd] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [resetState, setResetState] = useState({
+    reset_lancamentos: false,
+    reset_fixos: false,
+    reset_investimentos: false,
+    reset_metas: false,
+    loading: false,
+  });
 
   useEffect(() => {
     if (user) {
@@ -172,6 +180,88 @@ export default function Profile() {
                 {loadingPwd ? 'Alterando...' : 'Alterar senha'}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2 backdrop-blur border border-red-500/40" style={{ background: 'rgba(127, 29, 29, 0.2)' }}>
+          <CardHeader>
+            <CardTitle className="text-red-300">Ferramentas avançadas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-red-100">
+            <p className="text-red-200">
+              <strong>Atenção:</strong> estas ações apagam dados do seu ambiente. Use apenas para testes.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={resetState.reset_lancamentos}
+                  onChange={(e) => setResetState((p) => ({ ...p, reset_lancamentos: e.target.checked }))}
+                />
+                Apagar lançamentos
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={resetState.reset_fixos}
+                  onChange={(e) => setResetState((p) => ({ ...p, reset_fixos: e.target.checked }))}
+                />
+                Apagar fixos
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={resetState.reset_investimentos}
+                  onChange={(e) => setResetState((p) => ({ ...p, reset_investimentos: e.target.checked }))}
+                />
+                Apagar investimentos
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={resetState.reset_metas}
+                  onChange={(e) => setResetState((p) => ({ ...p, reset_metas: e.target.checked }))}
+                />
+                Apagar metas
+              </label>
+            </div>
+            <Button
+              variant="destructive"
+              className="w-full mt-2"
+              disabled={
+                !(
+                  resetState.reset_lancamentos ||
+                  resetState.reset_fixos ||
+                  resetState.reset_investimentos ||
+                  resetState.reset_metas
+                ) || resetState.loading
+              }
+              onClick={async () => {
+                if (!window.confirm('Tem certeza que deseja apagar esses dados? Esta ação não pode ser desfeita.')) {
+                  return;
+                }
+                try {
+                  setResetState((p) => ({ ...p, loading: true }));
+                  const { reset_lancamentos, reset_fixos, reset_investimentos, reset_metas } = resetState;
+                  const res = await resetData({ reset_lancamentos, reset_fixos, reset_investimentos, reset_metas });
+                  toast.success('Dados apagados com sucesso.');
+                  console.log('Reset response', res);
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Erro ao resetar dados. Verifique o token ADMIN_TOKEN no backend.');
+                } finally {
+                  setResetState({
+                    reset_lancamentos: false,
+                    reset_fixos: false,
+                    reset_investimentos: false,
+                    reset_metas: false,
+                    loading: false,
+                  });
+                }
+              }}
+            >
+              {resetState.loading ? 'Apagando...' : 'Apagar dados selecionados'}
+            </Button>
           </CardContent>
         </Card>
 

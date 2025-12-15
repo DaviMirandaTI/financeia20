@@ -169,6 +169,21 @@ export const buscarLancamentos = (query, pagina = 1, limite = 50) => {
   return fetchApi(`${API_BASE_URL}/api/lancamentos/busca?${params.toString()}`);
 };
 
+// --- Admin / Reset ---
+const ADMIN_TOKEN = process.env.REACT_APP_ADMIN_TOKEN;
+
+export const resetData = (options) => {
+  const headers = {};
+  if (ADMIN_TOKEN) {
+    headers['X-Admin-Token'] = ADMIN_TOKEN;
+  }
+  return fetchApi(`${API_BASE_URL}/admin/reset-data`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(options),
+  });
+};
+
 // --- Importação de extratos ---
 export const uploadExtrato = (file) => {
   const formData = new FormData();
@@ -192,3 +207,36 @@ export const aprenderCategoria = (regra) => {
     body: JSON.stringify(regra),
   });
 };
+
+// --- Estatísticas ---
+export const getEstatisticasDashboard = (periodoMes = null, periodoAno = null) => {
+  const params = new URLSearchParams();
+  if (periodoMes) params.append("periodo_mes", periodoMes);
+  if (periodoAno) params.append("periodo_ano", periodoAno);
+  return fetchApi(`${API_BASE_URL}/api/estatisticas/dashboard?${params.toString()}`);
+};
+
+// --- Cartão de Crédito ---
+export const listarCartoes = () => fetchApi(`${API_BASE_URL}/api/cartao`);
+export const criarCartao = (cartao) =>
+  fetchApi(`${API_BASE_URL}/api/cartao`, {
+    method: "POST",
+    body: JSON.stringify(cartao),
+  });
+export const atualizarCartao = (cartaoId, cartao) =>
+  fetchApi(`${API_BASE_URL}/api/cartao/${cartaoId}`, {
+    method: "PUT",
+    body: JSON.stringify(cartao),
+  });
+export const listarFaturas = (cartaoId, mes = null) => {
+  const params = mes ? `?mes=${mes}` : "";
+  return fetchApi(`${API_BASE_URL}/api/cartao/${cartaoId}/faturas${params}`);
+};
+export const calcularFaturaAtual = (cartaoId, mes = null) => {
+  const params = mes ? `?mes=${mes}` : "";
+  return fetchApi(`${API_BASE_URL}/api/cartao/${cartaoId}/calcular-fatura${params}`, {
+    method: "POST",
+  });
+};
+export const getAlertasVencimento = (diasAntes = 7) =>
+  fetchApi(`${API_BASE_URL}/api/cartao/alertas/vencimento?dias_antes=${diasAntes}`);

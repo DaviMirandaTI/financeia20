@@ -213,13 +213,20 @@ app.include_router(auth_router)
 from routes.setup_run import setup_router
 app.include_router(setup_router)
 
-# Router de upload
+# Router de upload e demais utilitários
 from routes.upload import upload_router
 from routes.importacao import import_router
 from routes.sugestoes import sugestoes_router
+from routes.admin import admin_router
+from routes.estatisticas import estatisticas_router
+from routes.cartao import cartao_router
+
 app.include_router(upload_router)
 app.include_router(import_router)
 app.include_router(sugestoes_router)
+app.include_router(admin_router)
+app.include_router(estatisticas_router)
+app.include_router(cartao_router)
 
 app.add_middleware(
     CORSMiddleware,

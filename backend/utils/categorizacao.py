@@ -7,13 +7,86 @@ from server import db
 
 
 PALAVRAS_PADRAO = {
+    # Utilidades
     "cpfl": "Conta de Luz",
     "sanasa": "Água",
     "desktop": "Internet",
+    
+    # Assinaturas e Serviços
     "spotify": "Assinaturas",
+    "nuuvem": "Lazer",
+    
+    # Alimentação
     "ifood": "Alimentação",
+    "restaurante": "Alimentação",
+    "churrascaria": "Alimentação",
+    
+    # Transporte
     "uber": "Transporte",
+    "auto posto": "Transporte",
+    "posto": "Transporte",
+    "lt stark": "Transporte",
+    
+    # Mercado
     "mercado": "Mercado",
+    "higa atacado": "Mercado",
+    "mercado sol nascente": "Mercado",
+    "am pm": "Mercado",
+    "oxxo": "Mercado",
+    
+    # Transferências Internas
+    "ana jullya": "Transferência Interna",
+    "ana lima": "Transferência Interna",
+    "davi miranda": "Transferência Interna",
+    "davi stark": "Transferência Interna",
+    "pix enviado": "Transferência",
+    "pix recebido": "Transferência",
+    
+    # Investimentos
+    "aplicação poupança": "Investimento",
+    "crédito liberado": "Transferência",
+    
+    # Dívidas e Cartão
+    "pagamento fatura": "Dívidas",
+    "pagamento online de fatura": "Dívidas",
+    "cartão": "Dívidas",
+    "pix cred": "Dívidas",  # Uso do crédito do cartão via Pix
+    "fatura": "Dívidas",
+    
+    # Saúde
+    "academia": "Saúde",
+    "panobianco academia": "Saúde",
+    "dentista": "Saúde",
+    "farmacia": "Saúde",
+    
+    # Renda
+    "salario": "Renda",
+    "pensão": "Renda",
+    "vale": "Renda",
+    "joão victor amaral": "Renda",  # PIX de bico
+    "joao victor amaral": "Renda",
+    "victor amaral": "Renda",
+    "bico": "Renda",
+    "pagamento recebido": "Renda",
+    
+    # Taxas e Impostos
+    "iof": "Taxas e Impostos",
+    "juros pix credito": "Taxas e Impostos",
+    "juros": "Taxas e Impostos",
+    "iof adicional": "Taxas e Impostos",
+    "iof diario": "Taxas e Impostos",
+    "iof internacional": "Taxas e Impostos",
+    
+    # Educação / Trabalho / Jogos
+    "udemy": "Educação",
+    "cursor": "Trabalho",  # Ferramentas de trabalho
+    "supercell": "Lazer",  # Jogos
+    "ggmax": "Lazer",
+    "eneba": "Lazer",
+    "playstation": "Lazer",
+    # Alimentação adicionais
+    "containertimb": "Alimentação",  # Food truck/barraca
+    "churroslandia": "Alimentação",
 }
 
 

@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { uploadExtrato, processarImportacao, aprenderCategoria } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CategoriaDialog } from "@/components/CategoriaDialog";
+import { ArrowLeft } from "lucide-react";
 
 export default function ImportarExtratos() {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [transacoes, setTransacoes] = useState([]);
   const [loadingUpload, setLoadingUpload] = useState(false);
@@ -72,12 +75,20 @@ export default function ImportarExtratos() {
     setMensagem(null);
     try {
       const resultado = await processarImportacao(transacoes);
-      setMensagem(
-        `Importação concluída. Adicionadas: ${resultado.adicionadas}, Duplicadas ignoradas: ${resultado.duplicadas}.`
-      );
+      const msg = `✅ Importação concluída! Adicionadas: ${resultado.adicionadas}, Duplicadas ignoradas: ${resultado.duplicadas}.`;
+      setMensagem(msg);
+      
+      // Limpar lista após sucesso
+      if (resultado.adicionadas > 0) {
+        setTimeout(() => {
+          setTransacoes([]);
+          setFile(null);
+          setMensagem("Importação salva com sucesso! Você pode importar outro arquivo ou voltar ao Dashboard.");
+        }, 2000);
+      }
     } catch (err) {
       console.error(err);
-      setMensagem(err.message || "Erro ao salvar importação.");
+      setMensagem("❌ " + (err.message || "Erro ao salvar importação."));
     } finally {
       setLoadingProcessar(false);
     }
@@ -89,13 +100,22 @@ export default function ImportarExtratos() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-start justify-center px-4 py-8"
+      className="min-h-screen w-full flex items-start justify-center px-2 sm:px-4 py-4 sm:py-8"
       style={{
         background:
           "radial-gradient(circle at top, rgba(16,185,129,0.15), transparent 55%), #020617",
       }}
     >
-      <div className="w-full max-w-5xl space-y-6">
+      <div className="w-full max-w-5xl space-y-4 sm:space-y-6">
+        <Button
+          onClick={() => navigate('/')}
+          variant="outline"
+          className="mb-4 border-slate-700 text-slate-300 hover:bg-slate-800"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar para Dashboard
+        </Button>
+        
         <Card className="bg-slate-900/80 border border-slate-800 shadow-xl backdrop-blur">
           <CardHeader>
             <CardTitle className="text-slate-50 text-xl">
@@ -123,7 +143,13 @@ export default function ImportarExtratos() {
               </Button>
             </div>
             {mensagem && (
-              <p className="text-xs text-emerald-400 mt-1">{mensagem}</p>
+              <div className={`p-3 rounded-lg mt-2 text-sm ${
+                mensagem.includes("❌") 
+                  ? "bg-red-500/10 border border-red-500/30 text-red-300" 
+                  : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+              }`}>
+                {mensagem}
+              </div>
             )}
             {!!transacoes.length && (
               <div className="flex flex-wrap gap-4 text-xs text-slate-300 mt-2">
@@ -176,88 +202,109 @@ export default function ImportarExtratos() {
                 {loadingProcessar ? "Salvando..." : "Processar importação"}
               </Button>
             </CardHeader>
-            <CardContent className="overflow-auto max-h-[420px]">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-900/80 sticky top-0 z-10">
-                  <tr className="text-slate-400">
-                    <th className="px-3 py-2 font-medium">Data</th>
-                    <th className="px-3 py-2 font-medium">Descrição</th>
-                    <th className="px-3 py-2 font-medium">Valor</th>
-                    <th className="px-3 py-2 font-medium">Tipo</th>
-                    <th className="px-3 py-2 font-medium">Categoria</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transacoes.map((t) => {
-                    const nova = !t.is_duplicada;
-                    const semCategoria = nova && !t.categoria;
-                    return (
-                      <tr
-                        key={t.id}
-                        className={
-                          "border-t border-slate-800/70" +
-                          (t.is_duplicada
-                            ? " text-slate-500 bg-slate-900/40"
-                            : semCategoria
-                            ? " bg-amber-500/5"
-                            : " text-slate-100")
-                        }
-                      >
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {t.data}
-                        </td>
-                        <td className="px-3 py-2 max-w-xs">
-                          <span className="line-clamp-2">{t.descricao}</span>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {t.tipo === "saida" ? "-" : "+"}{" "}
-                          {t.valor.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {t.tipo === "saida" ? "Saída" : "Entrada"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {t.categoria ? (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/40 text-[11px]">
-                              {t.categoria}
+            <CardContent className="overflow-auto max-h-[60vh] sm:max-h-[420px]">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <table className="w-full text-xs text-left border-collapse min-w-[700px]">
+                  <thead className="bg-slate-800/90 sticky top-0 z-10 border-b border-slate-700">
+                    <tr>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Data</th>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Descrição</th>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Valor</th>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Tipo</th>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Categoria</th>
+                      <th className="px-3 py-2.5 font-semibold text-slate-200 bg-slate-800/90">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transacoes.map((t) => {
+                      const nova = !t.is_duplicada;
+                      const semCategoria = nova && !t.categoria;
+                      return (
+                        <tr
+                          key={t.id}
+                          className={
+                            "border-b border-slate-700/50 transition-colors" +
+                            (t.is_duplicada
+                              ? " text-slate-500 bg-slate-900/60"
+                              : semCategoria
+                              ? " bg-amber-500/10 text-slate-200"
+                              : " text-slate-100 bg-slate-900/30 hover:bg-slate-800/50")
+                          }
+                        >
+                          <td className="px-2 sm:px-3 py-2.5 whitespace-nowrap font-mono text-slate-300 text-[11px] sm:text-xs">
+                            {t.data ? new Date(t.data + 'T00:00:00').toLocaleDateString('pt-BR') : "-"}
+                          </td>
+                          <td className="px-3 py-2.5 max-w-xs">
+                            <div className="flex flex-col gap-1">
+                              <span className="line-clamp-2 text-slate-200">{t.descricao || "-"}</span>
+                              {(t.parcelas_total || t.parcela_atual) && (
+                                <span className="text-[10px] text-blue-400 font-medium">
+                                  {t.parcela_atual && t.parcelas_total 
+                                    ? `Parcela ${t.parcela_atual}/${t.parcelas_total}`
+                                    : t.parcelas_total 
+                                    ? `Em ${t.parcelas_total}x`
+                                    : ''}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap font-semibold">
+                            <span className={t.tipo === "saida" ? "text-red-400" : "text-green-400"}>
+                              {t.tipo === "saida" ? "-" : "+"}{" "}
+                              {t.valor.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
                             </span>
-                          ) : semCategoria ? (
-                            <Button
-                              variant="outline"
-                              size="xs"
-                              onClick={() => abrirCategoria(t)}
-                              className="border-amber-400/60 text-amber-300 bg-transparent hover:bg-amber-500/10 text-[11px] h-6 px-2"
-                            >
-                              Definir
-                            </Button>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {t.is_duplicada ? (
-                            <span className="text-[11px] text-slate-400">
-                              Duplicada (ignorará)
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                              t.tipo === "saida" 
+                                ? "bg-red-500/20 text-red-300 border border-red-500/40" 
+                                : "bg-green-500/20 text-green-300 border border-green-500/40"
+                            }`}>
+                              {t.tipo === "saida" ? "Saída" : "Entrada"}
                             </span>
-                          ) : semCategoria ? (
-                            <span className="text-[11px] text-amber-400">
-                              Sem categoria
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-emerald-400">
-                              Nova
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {t.categoria ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-[10px] font-medium">
+                                {t.categoria}
+                              </span>
+                            ) : semCategoria ? (
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                onClick={() => abrirCategoria(t)}
+                                className="border-amber-400/70 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 text-[10px] h-6 px-2 font-medium"
+                              >
+                                Definir
+                              </Button>
+                            ) : (
+                              <span className="text-slate-500">-</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {t.is_duplicada ? (
+                              <span className="text-[10px] text-slate-500 font-medium">
+                                Duplicada
+                              </span>
+                            ) : semCategoria ? (
+                              <span className="text-[10px] text-amber-400 font-medium">
+                                Sem categoria
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-emerald-400 font-medium">
+                                Nova
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         )}

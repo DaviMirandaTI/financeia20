@@ -14,12 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, LogOut, User, Search, Plus } from "lucide-react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import {
   getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
   getFixos, createFixo, updateFixo, deleteFixoAPI,
   getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI,
-  sugerirLancamento
+  sugerirLancamento,
+  getEstatisticasDashboard,
+  getAlertasVencimento
 } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { GlobalSearch } from '../components/GlobalSearch';
@@ -36,6 +38,8 @@ export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState([]);
   const [fixos, setFixos] = useState([]);
   const [investimentos, setInvestimentos] = useState([]);
+  const [estatisticas, setEstatisticas] = useState(null);
+  const [alertasVencimento, setAlertasVencimento] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Filter states
@@ -60,20 +64,29 @@ export default function Dashboard() {
       setLoading(true);
       console.log('🔄 Carregando dados da API...');
       
-      const [lancamentosData, fixosData, investimentosData] = await Promise.all([
+      const periodo = periodoTipo === "mes" ? periodoMes : periodoTipo === "ano" ? periodoAno : null;
+      const periodoParam = periodoTipo === "mes" ? { periodoMes: periodo } : periodoTipo === "ano" ? { periodoAno: periodo } : {};
+      
+      const [lancamentosData, fixosData, investimentosData, estatisticasData, alertasData] = await Promise.all([
         getLancamentos(),
         getFixos(),
-        getInvestimentos()
+        getInvestimentos(),
+        getEstatisticasDashboard(periodoParam.periodoMes, periodoParam.periodoAno).catch(() => null),
+        getAlertasVencimento(7).catch(() => ({ alertas: [], total: 0 }))
       ]);
       
       setLancamentos(lancamentosData || []);
       setFixos(fixosData || []);
       setInvestimentos(investimentosData || []);
+      setEstatisticas(estatisticasData);
+      setAlertasVencimento(alertasData?.alertas || []);
       
       console.log('✅ Dados carregados com sucesso:', {
         lancamentos: lancamentosData?.length || 0,
         fixos: fixosData?.length || 0,
         investimentos: investimentosData?.length || 0,
+        estatisticas: !!estatisticasData,
+        alertas: alertasData?.total || 0,
       });
 
     } catch (error) {
@@ -83,6 +96,21 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, []);
+  
+  // Fetch estatísticas quando período mudar
+  useEffect(() => {
+    const fetchEstatisticas = async () => {
+      try {
+        const periodo = periodoTipo === "mes" ? periodoMes : periodoTipo === "ano" ? periodoAno : null;
+        const periodoParam = periodoTipo === "mes" ? { periodoMes: periodo } : periodoTipo === "ano" ? { periodoAno: periodo } : {};
+        const estatisticasData = await getEstatisticasDashboard(periodoParam.periodoMes, periodoParam.periodoAno).catch(() => null);
+        if (estatisticasData) setEstatisticas(estatisticasData);
+      } catch (error) {
+        console.error("Erro ao carregar estatísticas:", error);
+      }
+    };
+    fetchEstatisticas();
+  }, [periodoTipo, periodoMes, periodoAno]);
 
   // Load all data from API on startup
   useEffect(() => {
@@ -558,33 +586,35 @@ export default function Dashboard() {
       
               {/* Barra de Atalhos Rápidos e Busca */}
               <div className="quick-actions-bar" style={{
-                padding: '1rem',
+                padding: '0.75rem',
                 background: 'rgba(15, 23, 42, 0.8)',
                 borderBottom: '1px solid rgba(34, 211, 238, 0.2)',
                 display: 'flex',
-                gap: '0.75rem',
+                gap: '0.5rem',
                 alignItems: 'center',
                 flexWrap: 'wrap',
+                overflowX: 'auto',
               }}>
                 <Button
                   onClick={() => {
                     setEditingItem(null);
                     setShowLancamentoDialog(true);
-                    // Pré-configurar para Pix recebido
                     setTimeout(() => {
                       const event = new CustomEvent('quick-action', { detail: { tipo: 'entrada', forma: 'pix' } });
                       window.dispatchEvent(event);
                     }, 100);
                   }}
                   size="sm"
+                  className="text-xs sm:text-sm whitespace-nowrap"
                   style={{
                     background: 'rgba(16, 185, 129, 0.2)',
                     border: '1px solid rgba(16, 185, 129, 0.4)',
                     color: '#10b981',
                   }}
                 >
-                  <Plus size={16} className="mr-1" />
-                  Pix Recebido
+                  <Plus size={14} className="mr-1" />
+                  <span className="hidden sm:inline">Pix Recebido</span>
+                  <span className="sm:hidden">Pix</span>
                 </Button>
                 <Button
                   onClick={() => {
@@ -596,14 +626,16 @@ export default function Dashboard() {
                     }, 100);
                   }}
                   size="sm"
+                  className="text-xs sm:text-sm whitespace-nowrap"
                   style={{
                     background: 'rgba(239, 68, 68, 0.2)',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
                     color: '#ef4444',
                   }}
                 >
-                  <Plus size={16} className="mr-1" />
-                  Compra no Débito
+                  <Plus size={14} className="mr-1" />
+                  <span className="hidden sm:inline">Compra no Débito</span>
+                  <span className="sm:hidden">Débito</span>
                 </Button>
                 <Button
                   onClick={() => {
@@ -611,46 +643,59 @@ export default function Dashboard() {
                     setShowFixoDialog(true);
                   }}
                   size="sm"
+                  className="text-xs sm:text-sm whitespace-nowrap"
                   style={{
                     background: 'rgba(34, 211, 238, 0.2)',
                     border: '1px solid rgba(34, 211, 238, 0.4)',
                     color: '#22d3ee',
                   }}
                 >
-                  <Plus size={16} className="mr-1" />
-                  Conta Fixa
+                  <Plus size={14} className="mr-1" />
+                  <span className="hidden sm:inline">Conta Fixa</span>
+                  <span className="sm:hidden">Fixo</span>
                 </Button>
                 <Button
                   onClick={() => navigate('/importar-extratos')}
                   size="sm"
+                  className="text-xs sm:text-sm whitespace-nowrap"
                   style={{
                     background: 'rgba(59, 130, 246, 0.2)',
                     border: '1px solid rgba(59, 130, 246, 0.4)',
                     color: '#60a5fa',
                   }}
                 >
-                  <Upload size={16} className="mr-1" />
-                  Importar Extrato
+                  <Upload size={14} className="mr-1" />
+                  <span className="hidden sm:inline">Importar Extrato</span>
+                  <span className="sm:hidden">Importar</span>
                 </Button>
-                <div style={{ flex: 1 }} />
+                <div className="hidden sm:block" style={{ flex: 1 }} />
                 <Button
                   onClick={() => setShowGlobalSearch(true)}
                   variant="outline"
                   size="sm"
+                  className="text-xs sm:text-sm whitespace-nowrap"
                   style={{
                     border: '1px solid rgba(148, 163, 184, 0.3)',
                     color: '#94a3b8',
                   }}
                 >
-                  <Search size={16} className="mr-2" />
-                  Buscar
-                  <span className="ml-2 text-xs opacity-60">Ctrl+K</span>
+                  <Search size={14} className="mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Buscar</span>
+                  <span className="hidden lg:inline ml-2 text-xs opacity-60">Ctrl+K</span>
                 </Button>
               </div>
       
               {/* Main Content */}
               <main className="main-content">
-                        {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} saldoPlanejado={pagamentoInteligente.saldoFinal} />}
+                        {currentView === "dashboard" && (
+                          <DashboardView 
+                            stats={stats} 
+                            lancamentos={lancamentosFiltrados} 
+                            saldoPlanejado={pagamentoInteligente.saldoFinal}
+                            estatisticas={estatisticas}
+                            alertasVencimento={alertasVencimento}
+                          />
+                        )}
                         {currentView === "lancamentos" && (
                           <LancamentosView 
                             lancamentos={lancamentosFiltrados}                     onAdd={() => { setEditingItem(null); setShowLancamentoDialog(true); }}
@@ -716,12 +761,31 @@ export default function Dashboard() {
 }
 
 // Dashboard View
-function DashboardView({ stats, lancamentos, saldoPlanejado }) {
-  const topCategorias = Object.entries(stats.categorias)
+function DashboardView({ stats, lancamentos, saldoPlanejado, estatisticas, alertasVencimento }) {
+  // Usar estatísticas da API se disponível, senão usar stats local
+  const topCategoriasData = estatisticas?.top_categorias || Object.entries(stats.categorias || {})
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+    .slice(0, 5)
+    .map(([categoria, valor]) => ({ categoria, valor }));
+  
+  const topCategorias = topCategoriasData.map(item => ({
+    name: item.categoria || item[0],
+    value: item.valor || item[1],
+  }));
 
   const CHART_COLORS = ['#10b981', '#22d3ee', '#a855f7', '#fbbf24', '#f87171'];
+  
+  // Dados para gráfico Davi vs Ana
+  const gastosPorResponsavel = estatisticas?.gastos_por_responsavel || {};
+  const dadosResponsavel = [
+    { name: 'Davi', valor: gastosPorResponsavel['Davi'] || 0 },
+    { name: 'Ana', valor: gastosPorResponsavel['Ana'] || 0 },
+    { name: 'Outro', valor: gastosPorResponsavel['Outro'] || 0 },
+  ].filter(item => item.valor > 0);
+  
+  // Dados para gráfico de cartão
+  const usoCartao = estatisticas?.uso_cartao || {};
+  const topCartao = usoCartao.top_categorias || [];
 
   return (
     <div className="view-container" data-testid="dashboard-view">
@@ -788,8 +852,8 @@ function DashboardView({ stats, lancamentos, saldoPlanejado }) {
                 <PieChart>
                   <Pie
                     data={topCategorias}
-                    dataKey="1"
-                    nameKey="0"
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -801,7 +865,7 @@ function DashboardView({ stats, lancamentos, saldoPlanejado }) {
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value, name) => [`R$ ${value.toFixed(2)}`, name]} />
+                  <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -810,6 +874,77 @@ function DashboardView({ stats, lancamentos, saldoPlanejado }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Gráfico Davi vs Ana */}
+        {dadosResponsavel.length > 0 && (
+          <Card className="chart-card">
+            <CardHeader>
+              <CardTitle>Gastos por Responsável</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={dadosResponsavel}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="name" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip 
+                    formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, 'Gasto']}
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                  />
+                  <Bar dataKey="valor" fill="#10b981" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Gráfico de Cartão de Crédito */}
+        {usoCartao.total > 0 && (
+          <Card className="chart-card">
+            <CardHeader>
+              <CardTitle>Uso de Cartão de Crédito</CardTitle>
+              <p className="text-sm text-slate-400 mt-1">Total: R$ {usoCartao.total.toFixed(2)}</p>
+            </CardHeader>
+            <CardContent>
+              {topCartao.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topCartao} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis type="number" stroke="#94a3b8" />
+                    <YAxis dataKey="categoria" type="category" stroke="#94a3b8" width={100} />
+                    <Tooltip 
+                      formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, 'Gasto']}
+                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                    />
+                    <Bar dataKey="valor" fill="#f59e0b" radius={[0, 8, 8, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="empty-state">Nenhum gasto no cartão no período</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Alertas de Vencimento */}
+        {alertasVencimento.length > 0 && (
+          <Card className="chart-card border-amber-500/50">
+            <CardHeader>
+              <CardTitle className="text-amber-400">⚠️ Alertas de Vencimento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {alertasVencimento.map((alerta) => (
+                  <div key={alerta.id} className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <p className="font-semibold text-amber-300">Fatura vencendo em breve</p>
+                    <p className="text-sm text-slate-300">Valor: R$ {alerta.valor_total?.toFixed(2) || '0.00'}</p>
+                    <p className="text-xs text-slate-400">Vencimento: {new Date(alerta.data_vencimento).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="chart-card">
           <CardHeader>

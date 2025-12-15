@@ -24,6 +24,34 @@ def _normalizar_valor_br(valor_str: str) -> float:
     return float(s)
 
 
+def _extrair_parcelas(descricao: str) -> tuple[Optional[int], Optional[int]]:
+    """
+    Extrai informações de parcelamento da descrição.
+    Retorna (parcela_atual, parcelas_total) ou (None, None) se não encontrar.
+    
+    Exemplos:
+    - "Em 4x" -> (None, 4)
+    - "Parcela 2 de 4" -> (2, 4)
+    - "Em 3x" -> (None, 3)
+    """
+    desc_lower = descricao.lower()
+    
+    # Padrão: "Parcela X de Y"
+    match_parcela = re.search(r"parcela\s+(\d+)\s+de\s+(\d+)", desc_lower)
+    if match_parcela:
+        parcela_atual = int(match_parcela.group(1))
+        parcelas_total = int(match_parcela.group(2))
+        return (parcela_atual, parcelas_total)
+    
+    # Padrão: "Em Xx" (ex: "Em 4x", "Em 3x")
+    match_em = re.search(r"em\s+(\d+)x", desc_lower)
+    if match_em:
+        parcelas_total = int(match_em.group(1))
+        return (None, parcelas_total)
+    
+    return (None, None)
+
+
 def detectar_banco(arquivo_nome: str, conteudo_inicial: str) -> str:
     nome = arquivo_nome.lower()
     texto = conteudo_inicial.lower()
@@ -71,6 +99,9 @@ def parse_csv_inter(csv_content: str, arquivo_nome: str) -> List[TransacaoExtrai
         tipo = "entrada" if valor > 0 else "saida"
 
         desc_completa = f"{historico} - {descricao}".strip(" -")
+        
+        # Extrair informações de parcelamento
+        parcela_atual, parcelas_total = _extrair_parcelas(desc_completa)
 
         transacoes.append(
             TransacaoExtraida(
@@ -80,6 +111,8 @@ def parse_csv_inter(csv_content: str, arquivo_nome: str) -> List[TransacaoExtrai
                 tipo=tipo,
                 banco_origem="inter",
                 arquivo_nome=arquivo_nome,
+                parcela_atual=parcela_atual,
+                parcelas_total=parcelas_total,
             )
         )
 
@@ -131,6 +164,9 @@ def parse_csv_nubank(csv_content: str, arquivo_nome: str) -> List[TransacaoExtra
             continue
 
         tipo = "entrada" if valor > 0 else "saida"
+        
+        # Extrair informações de parcelamento
+        parcela_atual, parcelas_total = _extrair_parcelas(descricao)
 
         transacoes.append(
             TransacaoExtraida(
@@ -140,6 +176,8 @@ def parse_csv_nubank(csv_content: str, arquivo_nome: str) -> List[TransacaoExtra
                 tipo=tipo,
                 banco_origem="nubank",
                 arquivo_nome=arquivo_nome,
+                parcela_atual=parcela_atual,
+                parcelas_total=parcelas_total,
             )
         )
 

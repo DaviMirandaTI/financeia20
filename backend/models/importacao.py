@@ -22,6 +22,10 @@ class TransacaoExtraida(BaseModel):
     categoria: Optional[str] = None
     is_duplicada: bool = False
     transacao_existente_id: Optional[str] = None
+    
+    # Informações de parcelamento (para futuro)
+    parcelas_total: Optional[int] = None  # Ex: 4 (se "Em 4x")
+    parcela_atual: Optional[int] = None  # Ex: 2 (se "Parcela 2 de 4")
 
 
 class RegraCategorizacao(BaseModel):

@@ -25,6 +25,12 @@
 - **Padrão**: 1440 (24 horas)
 - **Exemplo**: `ACCESS_TOKEN_EXPIRE_MINUTES=1440`
 
+### ADMIN_TOKEN (Opcional, para reset de dados via API)
+- **Descrição**: Token para proteger o endpoint de reset de dados (`/admin/reset-data`)
+- **Uso**: Enviar via header `X-Admin-Token` nas requisições de reset
+- **Padrão**: Se não definido, o endpoint aceita requisições sem token (não recomendado em produção)
+- **Exemplo**: `ADMIN_TOKEN=StarkReset123`
+
 ## Como Adicionar no Render
 
 1. Acesse seu serviço no Render
