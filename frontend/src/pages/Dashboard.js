@@ -13,20 +13,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, LogOut, User } from "lucide-react";
+import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, LogOut, User, Search, Plus } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import {
   getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
   getFixos, createFixo, updateFixo, deleteFixoAPI,
-  getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI
+  getInvestimentos, createInvestimento, updateInvestimento, deleteInvestimentoAPI,
+  sugerirLancamento
 } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { GlobalSearch } from '../components/GlobalSearch';
+import { CATEGORIAS_PADRAO } from '../config/categories';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState("dashboard");
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   
   // Data states
   const [lancamentos, setLancamentos] = useState([]);
@@ -84,6 +88,21 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Atalho de teclado para busca global (Ctrl+K ou Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+      }
+      if (e.key === 'Escape' && showGlobalSearch) {
+        setShowGlobalSearch(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showGlobalSearch]);
 
   // Auto-generate lancamentos from fixos
   useEffect(() => {
@@ -537,6 +556,86 @@ export default function Dashboard() {
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
       
+              {/* Barra de Atalhos Rápidos e Busca */}
+              <div className="quick-actions-bar" style={{
+                padding: '1rem',
+                background: 'rgba(15, 23, 42, 0.8)',
+                borderBottom: '1px solid rgba(34, 211, 238, 0.2)',
+                display: 'flex',
+                gap: '0.75rem',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}>
+                <Button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setShowLancamentoDialog(true);
+                    // Pré-configurar para Pix recebido
+                    setTimeout(() => {
+                      const event = new CustomEvent('quick-action', { detail: { tipo: 'entrada', forma: 'pix' } });
+                      window.dispatchEvent(event);
+                    }, 100);
+                  }}
+                  size="sm"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    color: '#10b981',
+                  }}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Pix Recebido
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setShowLancamentoDialog(true);
+                    setTimeout(() => {
+                      const event = new CustomEvent('quick-action', { detail: { tipo: 'saida', forma: 'debito' } });
+                      window.dispatchEvent(event);
+                    }, 100);
+                  }}
+                  size="sm"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: '#ef4444',
+                  }}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Compra no Débito
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setShowFixoDialog(true);
+                  }}
+                  size="sm"
+                  style={{
+                    background: 'rgba(34, 211, 238, 0.2)',
+                    border: '1px solid rgba(34, 211, 238, 0.4)',
+                    color: '#22d3ee',
+                  }}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Conta Fixa
+                </Button>
+                <div style={{ flex: 1 }} />
+                <Button
+                  onClick={() => setShowGlobalSearch(true)}
+                  variant="outline"
+                  size="sm"
+                  style={{
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    color: '#94a3b8',
+                  }}
+                >
+                  <Search size={16} className="mr-2" />
+                  Buscar
+                  <span className="ml-2 text-xs opacity-60">Ctrl+K</span>
+                </Button>
+              </div>
+      
               {/* Main Content */}
               <main className="main-content">
                         {currentView === "dashboard" && <DashboardView stats={stats} lancamentos={lancamentosFiltrados} saldoPlanejado={pagamentoInteligente.saldoFinal} />}
@@ -567,6 +666,9 @@ export default function Dashboard() {
             />
           )}
         </main>
+
+        {/* Busca Global */}
+        <GlobalSearch open={showGlobalSearch} onOpenChange={setShowGlobalSearch} />
 
         {/* Dialogs */}
         {showLancamentoDialog && (
@@ -1033,6 +1135,8 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
     responsavel: 'Davi',
     observacao: ''
   });
+  const [sugestao, setSugestao] = useState(null);
+  const [carregandoSugestao, setCarregandoSugestao] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -1048,11 +1152,67 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
       };
       if (editingItem) {
         setFormData({ ...defaultData, ...editingItem });
+        setSugestao(null);
       } else {
         setFormData(defaultData);
+        setSugestao(null);
       }
     }
   }, [editingItem, open]);
+
+  // Escutar evento de atalho rápido
+  useEffect(() => {
+    const handleQuickAction = (e) => {
+      if (open && !editingItem) {
+        const { tipo, forma } = e.detail;
+        setFormData(prev => ({ ...prev, tipo, forma }));
+      }
+    };
+    window.addEventListener('quick-action', handleQuickAction);
+    return () => window.removeEventListener('quick-action', handleQuickAction);
+  }, [open, editingItem]);
+
+  // Buscar sugestão quando descrição mudar
+  useEffect(() => {
+    if (!open || editingItem) return;
+    
+    const descricao = formData.descricao.trim();
+    if (descricao.length < 3) {
+      setSugestao(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setCarregandoSugestao(true);
+      try {
+        const resposta = await sugerirLancamento({
+          descricao,
+          valor: formData.valor ? parseFloat(formData.valor) : null,
+          tipo: formData.tipo,
+          forma: formData.forma,
+        });
+        if (resposta.categoria_sugerida) {
+          setSugestao(resposta);
+          // Aplicar sugestão automaticamente se categoria ainda não foi alterada manualmente
+          if (formData.categoria === 'Outros' || formData.categoria === '') {
+            setFormData(prev => ({
+              ...prev,
+              categoria: resposta.categoria_sugerida,
+            }));
+          }
+        } else {
+          setSugestao(null);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar sugestão:', error);
+        setSugestao(null);
+      } finally {
+        setCarregandoSugestao(false);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.descricao, formData.tipo, formData.forma, open, editingItem]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -1084,24 +1244,29 @@ function LancamentoDialog({ open, onOpenChange, onSave, editingItem }) {
               required
               data-testid="lancamento-descricao-input"
             />
+            {carregandoSugestao && (
+              <p className="text-xs text-muted-foreground mt-1">Buscando sugestão...</p>
+            )}
+            {sugestao && sugestao.categoria_sugerida && !carregandoSugestao && (
+              <p className="text-xs text-cyan-400 mt-1">
+                💡 Sugestão: {sugestao.categoria_sugerida} (pode alterar)
+              </p>
+            )}
           </div>
           <div>
             <Label>Categoria</Label>
             <select 
               value={formData.categoria} 
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, categoria: e.target.value });
+                setSugestao(null); // Limpar sugestão quando usuário alterar manualmente
+              }}
               className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid="lancamento-categoria-select"
             >
-              <option value="Alimentação">Alimentação</option>
-              <option value="Moradia">Moradia</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Saúde">Saúde</option>
-              <option value="Lazer">Lazer</option>
-              <option value="Filha">Filha</option>
-              <option value="Dívidas">Dívidas</option>
-              <option value="Investimento">Investimento</option>
-              <option value="Outros">Outros</option>
+              {CATEGORIAS_PADRAO.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
           </div>
           <div>

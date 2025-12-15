@@ -156,3 +156,39 @@ export const uploadImage = (file) => {
   formData.append('file', file);
   return fetchApi(`${API_BASE_URL}/upload/image`, { method: 'POST', body: formData });
 };
+
+// --- Sugestões e Busca ---
+export const sugerirLancamento = (data) =>
+  fetchApi(`${API_BASE_URL}/api/sugerir-lancamento`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const buscarLancamentos = (query, pagina = 1, limite = 50) => {
+  const params = new URLSearchParams({ q: query, pagina: pagina.toString(), limite: limite.toString() });
+  return fetchApi(`${API_BASE_URL}/api/lancamentos/busca?${params.toString()}`);
+};
+
+// --- Importação de extratos ---
+export const uploadExtrato = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetchApi(`${API_BASE_URL}/api/importar-extrato`, {
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const processarImportacao = (transacoes) => {
+  return fetchApi(`${API_BASE_URL}/api/importar-extrato/processar`, {
+    method: 'POST',
+    body: JSON.stringify(transacoes),
+  });
+};
+
+export const aprenderCategoria = (regra) => {
+  return fetchApi(`${API_BASE_URL}/api/importar-extrato/aprender-categoria`, {
+    method: 'POST',
+    body: JSON.stringify(regra),
+  });
+};

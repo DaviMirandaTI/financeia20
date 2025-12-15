@@ -91,6 +91,47 @@ async def get_all_lancamentos():
     lancamentos_cursor = db.lancamentos.find({})
     return [mongo_to_dict(l) async for l in lancamentos_cursor]
 
+@api_router.get("/lancamentos/busca")
+async def buscar_lancamentos(q: str = "", pagina: int = 1, limite: int = 50):
+    """
+    Busca global em lançamentos por descrição, categoria, responsável, forma.
+    Retorna resultados paginados.
+    """
+    if not q or len(q.strip()) < 1:
+        return {"resultados": [], "total": 0, "pagina": pagina, "limite": limite}
+    
+    query_str = q.strip()
+    
+    # Busca case-insensitive em múltiplos campos usando regex
+    import re
+    regex_pattern = re.compile(query_str, re.IGNORECASE)
+    
+    query = {
+        "$or": [
+            {"descricao": regex_pattern},
+            {"categoria": regex_pattern},
+            {"responsavel": regex_pattern},
+            {"forma": regex_pattern},
+        ]
+    }
+    
+    # Contar total
+    total = await db.lancamentos.count_documents(query)
+    
+    # Buscar com paginação
+    skip = (pagina - 1) * limite
+    lancamentos_cursor = db.lancamentos.find(query).sort("data", -1).skip(skip).limit(limite)
+    
+    resultados = [mongo_to_dict(l) async for l in lancamentos_cursor]
+    
+    return {
+        "resultados": resultados,
+        "total": total,
+        "pagina": pagina,
+        "limite": limite,
+        "total_paginas": (total + limite - 1) // limite,
+    }
+
 @api_router.post("/lancamentos", response_model=Lancamento, status_code=status.HTTP_201_CREATED)
 async def create_lancamento(lancamento: Lancamento):
     await db.lancamentos.insert_one(lancamento.model_dump(by_alias=True))
@@ -174,7 +215,11 @@ app.include_router(setup_router)
 
 # Router de upload
 from routes.upload import upload_router
+from routes.importacao import import_router
+from routes.sugestoes import sugestoes_router
 app.include_router(upload_router)
+app.include_router(import_router)
+app.include_router(sugestoes_router)
 
 app.add_middleware(
     CORSMiddleware,
