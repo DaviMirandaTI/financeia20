@@ -13,8 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, LogOut, User, Search, Plus } from "lucide-react";
+import { Menu, X, TrendingUp, TrendingDown, Wallet, Target, Download, Upload, LayoutDashboard, Receipt, Repeat, Zap, DollarSign, LogOut, User, Search, Plus, Tag, CreditCard, FileDown } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   getLancamentos, createLancamento, updateLancamento, deleteLancamentoAPI,
   getFixos, createFixo, updateFixo, deleteFixoAPI,
@@ -498,6 +499,14 @@ export default function Dashboard() {
                     <TrendingUp size={20} />
                     {sidebarOpen && <span>Investimentos</span>}
                   </button>
+                  <button 
+                    className={`nav-item ${currentView === 'categorias' ? 'active' : ''}`} 
+                    onClick={() => setCurrentView('categorias')}
+                    data-testid="nav-categorias-btn"
+                  >
+                    <Tag size={20} />
+                    {sidebarOpen && <span>Categorias</span>}
+                  </button>
                 </nav>
       
                 <div className="sidebar-footer">
@@ -746,6 +755,13 @@ export default function Dashboard() {
               onAdd={() => { setEditingItem(null); setShowInvestimentoDialog(true); }}
               onEdit={(item) => { setEditingItem(item); setShowInvestimentoDialog(true); }}
               onDelete={deletarInvestimento}
+            />
+          }
+          {currentView === "categorias" && (
+            <CategoriasView 
+              lancamentos={lancamentosFiltrados}
+              stats={stats}
+              estatisticas={estatisticas}
             />
           )}
         </main>
@@ -1816,6 +1832,198 @@ function InvestimentoDialog({ open, onOpenChange, onSave, editingItem }) {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Categorias View
+function CategoriasView({ lancamentos, stats, estatisticas }) {
+  // Agrupar lançamentos por categoria
+  const categoriasMap = useMemo(() => {
+    const map = {};
+    lancamentos.forEach(l => {
+      const cat = l.categoria || 'Outros';
+      if (!map[cat]) {
+        map[cat] = {
+          nome: cat,
+          lancamentos: [],
+          total: 0,
+          totalEntrada: 0,
+          totalSaida: 0,
+        };
+      }
+      map[cat].lancamentos.push(l);
+      map[cat].total += Number(l.valor) || 0;
+      if (l.tipo === 'entrada') {
+        map[cat].totalEntrada += Number(l.valor) || 0;
+      } else {
+        map[cat].totalSaida += Number(l.valor) || 0;
+      }
+    });
+    return Object.values(map).sort((a, b) => b.totalSaida - a.totalSaida);
+  }, [lancamentos]);
+
+  // Função para exportar categoria como CSV
+  const exportarCategoria = (categoria) => {
+    const lancamentosCategoria = categoriasMap.find(c => c.nome === categoria)?.lancamentos || [];
+    if (lancamentosCategoria.length === 0) return;
+
+    const csvContent = [
+      ['Data', 'Descrição', 'Tipo', 'Valor', 'Forma', 'Responsável'].join(';'),
+      ...lancamentosCategoria.map(l => [
+        l.data,
+        l.descricao,
+        l.tipo,
+        l.valor.toFixed(2),
+        l.forma,
+        l.responsavel || '-'
+      ].join(';'))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `categoria_${categoria.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  // Função para exportar todas as categorias
+  const exportarTodasCategorias = () => {
+    const csvContent = [
+      ['Categoria', 'Data', 'Descrição', 'Tipo', 'Valor', 'Forma', 'Responsável'].join(';'),
+      ...lancamentos.map(l => [
+        l.categoria || 'Outros',
+        l.data,
+        l.descricao,
+        l.tipo,
+        l.valor.toFixed(2),
+        l.forma,
+        l.responsavel || '-'
+      ].join(';'))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `todas_categorias.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className="view-container" data-testid="categorias-view">
+      <div className="view-header">
+        <h1 className="view-title">Categorias</h1>
+        <Button 
+          onClick={exportarTodasCategorias}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <FileDown size={16} />
+          Exportar Todas
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {categoriasMap.length > 0 ? (
+          <Accordion type="single" collapsible className="w-full">
+            {categoriasMap.map((categoria) => (
+              <AccordionItem 
+                key={categoria.nome} 
+                value={categoria.nome}
+                className="border border-slate-800 rounded-lg mb-3 bg-slate-900/50"
+              >
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center gap-3">
+                      <Tag className="w-5 h-5 text-emerald-400" />
+                      <div className="text-left">
+                        <h3 className="font-semibold text-slate-50">{categoria.nome}</h3>
+                        <p className="text-xs text-slate-400">
+                          {categoria.lancamentos.length} lançamento(s) • 
+                          Entradas: R$ {categoria.totalEntrada.toFixed(2)} • 
+                          Saídas: R$ {categoria.totalSaida.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-slate-50">
+                        R$ {categoria.totalSaida.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-end mb-2">
+                      <Button
+                        onClick={() => exportarCategoria(categoria.nome)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download size={14} />
+                        Exportar CSV
+                      </Button>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Valor</TableHead>
+                            <TableHead>Forma</TableHead>
+                            <TableHead>Responsável</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {categoria.lancamentos
+                            .sort((a, b) => new Date(b.data) - new Date(a.data))
+                            .map(l => (
+                              <TableRow key={l.id}>
+                                <TableCell className="text-xs">
+                                  {new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </TableCell>
+                                <TableCell className="text-xs max-w-xs truncate">
+                                  {l.descricao}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={l.tipo === 'entrada' ? 'default' : 'destructive'} className="text-xs">
+                                    {l.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className={`text-xs font-semibold ${l.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'}`}>
+                                  {l.tipo === 'entrada' ? '+' : '-'} R$ {Number(l.valor).toFixed(2)}
+                                </TableCell>
+                                <TableCell className="text-xs">{l.forma}</TableCell>
+                                <TableCell className="text-xs">{l.responsavel || '-'}</TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        ) : (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-slate-400">Nenhuma categoria encontrada</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 }
 
