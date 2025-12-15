@@ -620,6 +620,18 @@ export default function Dashboard() {
                   <Plus size={16} className="mr-1" />
                   Conta Fixa
                 </Button>
+                <Button
+                  onClick={() => navigate('/importar-extratos')}
+                  size="sm"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.2)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    color: '#60a5fa',
+                  }}
+                >
+                  <Upload size={16} className="mr-1" />
+                  Importar Extrato
+                </Button>
                 <div style={{ flex: 1 }} />
                 <Button
                   onClick={() => setShowGlobalSearch(true)}
